@@ -1,0 +1,12 @@
+services:
+  lucid:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - uploads:/app/uploads
+      - data:/app/data
+
+volumes:
+  uploads:
+  data:

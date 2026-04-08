@@ -1,0 +1,31 @@
+{
+  "server": {
+    "port": 8888,
+    "debug": true
+  },
+  "timeouts": {
+    "ai_api": 120,
+    "lucid_api": 15
+  },
+  "ai_providers": {
+    "gemini": {
+      "base_url": "https://generativelanguage.googleapis.com",
+      "timeout": 30
+    },
+    "openai": {
+      "base_url": "https://api.openai.com",
+      "timeout": 30
+    },
+    "claude": {
+      "base_url": "https://api.anthropic.com",
+      "timeout": 30
+    },
+    "xai": {
+      "base_url": "https://api.x.ai",
+      "timeout": 30
+    }
+  },
+  "lucid": {
+    "timeout": 15
+  }
+}

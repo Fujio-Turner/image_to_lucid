@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucid</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="min-h-screen bg-base-200">
+
+  <!-- Navbar -->
+  <div class="navbar bg-base-100 shadow-sm">
+    <div class="flex-1">
+      <a class="btn btn-ghost text-xl text-primary">Lucid <span class="text-xs font-normal text-base-content/50 ml-1">v1.0.0</span></a>
+    </div>
+    <div class="flex-none flex items-center gap-2">
+      <!-- Status Indicators -->
+      <div class="flex items-center gap-1">
+        <div class="tooltip tooltip-bottom" data-tip="Couchbase Lite">
+          <button class="btn btn-ghost btn-circle btn-xs" id="statusCBL">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 4 4 8 4s8-2 8-4V7M4 7c0 2 4 4 8 4s8-2 8-4M4 7c0-2 4-4 8-4s8 2 8 4"/></svg>
+          </button>
+        </div>
+        <div class="tooltip tooltip-bottom" data-tip="AI API">
+          <button class="btn btn-ghost btn-circle btn-xs" id="statusAI">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </button>
+        </div>
+        <div class="tooltip tooltip-bottom" data-tip="Lucid REST API">
+          <button class="btn btn-ghost btn-circle btn-xs" id="statusLucid">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="divider divider-horizontal mx-0"></div>
+      <!-- Theme Toggle -->
+      <label class="toggle text-base-content" title="Toggle theme">
+        <input type="checkbox" id="themeToggle" class="theme-controller" />
+        <svg aria-label="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg aria-label="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </label>
+      <!-- Debug Toggle (visible only with ?debug=true) -->
+      <button class="btn btn-ghost btn-circle hidden" id="debugToggleBtn" title="Toggle Debug Console">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93l1.41 1.41M3 12h2m14 0h2m-2.93-5.66l-1.41 1.41M12 2v2m0 16v2m-7.07-2.93l1.41-1.41m12.73 0l1.41 1.41"/>
+        </svg>
+      </button>
+      <!-- Help -->
+      <a href="/help.html" class="btn btn-ghost btn-circle" title="Help">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </a>
+      <!-- Settings -->
+      <button class="btn btn-ghost btn-circle" onclick="settingsModal.showModal()" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-2xl mx-auto py-10 px-4">
+
+    <!-- Steps -->
+    <ul class="steps steps-horizontal w-full mb-10" id="progressSteps">
+      <li class="step step-primary" id="step-upload">Upload Image</li>
+      <li class="step" id="step-ai">Send to AI</li>
+      <li class="step" id="step-lucid">Send to Lucid</li>
+      <li class="step" id="step-done">Done</li>
+    </ul>
+
+    <!-- Upload Card -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body items-center text-center">
+        <h2 class="card-title mb-2">Upload Image</h2>
+        <p class="text-base-content/60 mb-4">Drag &amp; drop a PNG or JPEG file, or browse to select one.</p>
+
+        <!-- Drop Zone -->
+        <div id="dropzone" class="border-2 border-dashed border-base-content/20 rounded-xl w-full py-16 px-8 flex flex-col items-center justify-center gap-4 transition-colors cursor-pointer hover:border-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span class="text-base-content/50 text-sm">Drop image here</span>
+        </div>
+
+        <!-- DaisyUI File Input -->
+        <fieldset class="fieldset w-full max-w-md mt-4">
+          <legend class="fieldset-legend">Pick a file</legend>
+          <input type="file" class="file-input file-input-primary w-full" id="fileInput" accept=".png,.jpg,.jpeg" />
+          <label class="label">PNG, JPG, or JPEG only</label>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- Upload Results -->
+    <div id="uploadList" class="mt-6 flex flex-col gap-3"></div>
+
+    <!-- Recent Images -->
+    <div class="card bg-base-100 shadow-xl mt-8">
+      <div class="card-body">
+        <h2 class="card-title text-sm">Recent Images</h2>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Preview</th>
+                <th>Filename</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>AI</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="imageHistoryBody">
+              <tr><td colspan="6" class="text-center text-base-content/40">No images yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex justify-between items-center mt-3">
+          <button class="btn btn-sm btn-outline" id="prevPage" disabled>← Prev</button>
+          <span class="text-xs text-base-content/50" id="pageInfo">Page 1</span>
+          <button class="btn btn-sm btn-outline" id="nextPage" disabled>Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal (dialog method) -->
+  <dialog id="settingsModal" class="modal">
+    <div class="modal-box w-11/12 max-w-2xl">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-lg font-bold text-primary">Settings</h3>
+        <button class="btn btn-primary btn-sm" id="saveSettings">Save Settings</button>
+      </div>
+
+      <!-- Lucid REST API -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" checked />
+        <div class="collapse-title font-semibold">Lucid REST API <div class="tooltip ml-2" data-tip="Connects to the Lucid.co visual collaboration platform."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">API Key <div class="tooltip" data-tip="Bearer token from lucid.app/developer. Used to authenticate REST API requests."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="password" class="input input-bordered w-full" id="lucid_key" placeholder="API Key" />
+          </fieldset>
+          <p class="text-xs text-base-content/50 mt-2">Create an API key at <a href="https://lucid.app/developer#/apikeys" target="_blank" class="link link-primary">lucid.app/developer</a></p>
+        </div>
+      </div>
+
+      <!-- AI Provider Selection -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" checked />
+        <div class="collapse-title font-semibold">Active AI Provider <div class="tooltip ml-2" data-tip="Select which AI provider will process your images. Only one can be active at a time."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <div class="flex flex-col gap-2" id="aiProviderRadios">
+            <label class="label cursor-pointer justify-start gap-3">
+              <input type="radio" name="ai_provider" value="gemini" class="radio radio-primary" />
+              <span>Gemini</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3">
+              <input type="radio" name="ai_provider" value="openai" class="radio radio-primary" />
+              <span>OpenAI</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3">
+              <input type="radio" name="ai_provider" value="claude" class="radio radio-primary" />
+              <span>Claude</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3">
+              <input type="radio" name="ai_provider" value="xai" class="radio radio-primary" />
+              <span>xAI (Grok)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gemini -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold">Gemini <div class="tooltip ml-2" data-tip="Google's multimodal AI. Get key at aistudio.google.com/apikey"><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">API Key <div class="tooltip" data-tip="Your Google AI Studio API key."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="password" class="input input-bordered w-full" id="gemini_key" placeholder="API Key" />
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- OpenAI -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold">OpenAI <div class="tooltip ml-2" data-tip="OpenAI GPT models. Get key at platform.openai.com/api-keys"><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">API Key <div class="tooltip" data-tip="Your OpenAI platform API key."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="password" class="input input-bordered w-full" id="openai_key" placeholder="API Key" />
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- Claude -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold">Claude <div class="tooltip ml-2" data-tip="Anthropic's Claude AI. Get key at console.anthropic.com"><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">API Key <div class="tooltip" data-tip="Your Anthropic Console API key."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="password" class="input input-bordered w-full" id="claude_key" placeholder="API Key" />
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- xAI -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold">xAI (Grok) <div class="tooltip ml-2" data-tip="xAI's Grok models. Get key at console.x.ai"><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">API Key <div class="tooltip" data-tip="Your xAI Console API key."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="password" class="input input-bordered w-full" id="xai_key" placeholder="API Key" />
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- Timeouts (from config.json — read-only) -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold">Timeouts <span class="badge badge-sm badge-ghost ml-2">config.json</span> <div class="tooltip ml-2" data-tip="Read-only. Set in config.json at build time."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content flex flex-col gap-3">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">AI API Timeout (seconds) <div class="tooltip" data-tip="Max seconds to wait for an AI provider response."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="number" class="input input-bordered w-full" id="timeout_ai" disabled />
+          </fieldset>
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Lucid API Timeout (seconds) <div class="tooltip" data-tip="Max seconds to wait for the Lucid REST API response."><span class="badge badge-outline badge-xs cursor-help">?</span></div></legend>
+            <input type="number" class="input input-bordered w-full" id="timeout_lucid" disabled />
+          </fieldset>
+          <p class="text-xs text-base-content/50">Edit <code>config.json</code> and rebuild to change these values.</p>
+        </div>
+      </div>
+
+      <!-- Couchbase Lite Stats -->
+      <div class="collapse collapse-arrow bg-base-200 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold">Couchbase Lite <div class="tooltip ml-2" data-tip="Local embedded database running inside the container. Read-only stats."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+        <div class="collapse-content">
+          <div class="stats stats-vertical w-full bg-base-100 shadow-sm">
+            <div class="stat">
+              <div class="stat-title">Status <div class="tooltip" data-tip="Active means CBL library is loaded. Fallback means using JSON file storage."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+              <div class="stat-value text-lg" id="cbl_status">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Database <div class="tooltip" data-tip="The name of the Couchbase Lite database."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+              <div class="stat-desc text-sm" id="cbl_db_name">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Document Count <div class="tooltip" data-tip="Total number of documents stored in the local database."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+              <div class="stat-value text-lg" id="cbl_doc_count">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Path <div class="tooltip" data-tip="Filesystem path to the database inside the Docker container."><span class="badge badge-outline badge-xs cursor-help">?</span></div></div>
+              <div class="stat-desc text-xs break-all" id="cbl_db_dir">—</div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline mt-3" id="refreshCblStats">Refresh</button>
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <a href="/help.html" target="_blank" class="btn btn-ghost btn-sm gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          Settings Guide
+        </a>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+
+  <!-- Debug Console (visible only with ?debug=true) -->
+  <div id="debugConsole" class="fixed bottom-0 left-0 right-0 bg-base-300 border-t-2 border-primary shadow-2xl transition-transform duration-300 translate-y-full z-50 hidden" style="height: 320px;">
+    <div class="flex items-center justify-between px-4 py-2 bg-base-100 border-b border-base-content/10">
+      <div class="flex items-center gap-2">
+        <span class="font-mono text-sm font-bold text-primary">🐛 Debug Console</span>
+        <span class="badge badge-sm badge-ghost font-mono" id="debugEntryCount">0 entries</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="label cursor-pointer gap-2">
+          <span class="text-xs">Auto-scroll</span>
+          <input type="checkbox" class="toggle toggle-xs toggle-primary" id="debugAutoScroll" checked />
+        </label>
+        <button class="btn btn-xs btn-outline btn-warning" id="debugResendAI" disabled>↻ Resend to AI</button>
+        <button class="btn btn-xs btn-outline btn-secondary" id="debugResendLucid" disabled>↻ Resend to Lucid</button>
+        <div class="divider divider-horizontal mx-0"></div>
+        <button class="btn btn-xs btn-outline btn-error" id="debugClearBtn">Clear</button>
+        <button class="btn btn-xs btn-ghost" id="debugCloseBtn">✕</button>
+      </div>
+    </div>
+    <div id="debugLogBody" class="overflow-y-auto font-mono text-xs p-2" style="height: calc(320px - 44px);"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast toast-end" id="toastContainer"></div>
+
+  <script>
+    // --- Theme ---
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('lucid-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    themeToggle.checked = savedTheme === 'dark';
+    themeToggle.addEventListener('change', () => {
+      const theme = themeToggle.checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('lucid-theme', theme);
+    });
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadList = document.getElementById('uploadList');
+
+    // --- Step management ---
+    function setStep(stepNum) {
+      const ids = ['step-upload', 'step-ai', 'step-lucid', 'step-done'];
+      ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (i < stepNum) {
+          el.className = 'step step-primary';
+        } else {
+          el.className = 'step';
+        }
+      });
+    }
+
+    // --- Drag & Drop ---
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('border-primary', 'bg-primary/5');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-primary', 'bg-primary/5');
+    });
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('border-primary', 'bg-primary/5');
+      if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) uploadFile(fileInput.files[0]);
+      fileInput.value = '';
+    });
+
+    function uploadFile(file) {
+      const id = Date.now();
+      const thumb = URL.createObjectURL(file);
+
+      // Step 1: uploading
+      setStep(1);
+
+      uploadList.insertAdjacentHTML('afterbegin', `
+        <div class="card card-side bg-base-100 shadow-sm" id="item-${id}">
+          <figure class="pl-4">
+            <img src="${thumb}" alt="${file.name}" class="w-16 h-16 object-cover rounded-lg" />
+          </figure>
+          <div class="card-body py-4">
+            <h3 class="card-title text-sm">${file.name}</h3>
+            <p class="text-xs text-base-content/60 upload-status">
+              <span class="loading loading-spinner loading-xs"></span> Uploading…
+            </p>
+          </div>
+        </div>`);
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fetch('/upload', { method: 'POST', body: fd })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(({ ok, data }) => {
+          const statusEl = document.querySelector(`#item-${id} .upload-status`);
+          if (ok) {
+            statusEl.innerHTML = `<span class="badge badge-success badge-sm">Uploaded</span>
+              <button class="btn btn-primary btn-xs ml-2 send-to-ai-btn" data-filename="${data.filename}" data-item-id="${id}">Send to AI</button>`;
+            setStep(2);
+            showToast('File uploaded successfully', 'alert-success');
+            loadImages();
+            // Wire up Send to AI button
+            document.querySelector(`#item-${id} .send-to-ai-btn`).addEventListener('click', (e) => {
+              sendToAI(e.target.dataset.filename, id);
+            });
+            // Auto-send to AI
+            sendToAI(data.filename, id);
+          } else {
+            statusEl.innerHTML = `<span class="badge badge-error badge-sm">${data.error || 'Failed'}</span>`;
+            showToast(data.error || 'Upload failed', 'alert-error');
+          }
+        })
+        .catch(() => {
+          const statusEl = document.querySelector(`#item-${id} .upload-status`);
+          statusEl.innerHTML = '<span class="badge badge-error badge-sm">Network error</span>';
+          showToast('Network error', 'alert-error');
+        });
+    }
+
+    // --- Send to AI ---
+    let lastLucidDoc = null;
+    let lastAiFilename = null;
+    let lastAiTitle = null;
+    let lastAiItemId = null;
+    function sendToAI(filename, itemId) {
+      const statusEl = document.querySelector(`#item-${itemId} .upload-status`);
+      statusEl.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Sending to AI…';
+      setStep(2);
+      fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(({ ok, data }) => {
+          if (ok) {
+            lastLucidDoc = data.lucid_document;
+            lastAiFilename = filename;
+            lastAiTitle = data.ai_result?.title || 'AI Diagram';
+            lastAiItemId = itemId;
+            document.getElementById('debugResendAI').disabled = false;
+            document.getElementById('debugResendLucid').disabled = false;
+            const shapeCount = data.ai_result?.shapes?.length || 0;
+            const lineCount = data.ai_result?.lines?.length || 0;
+            statusEl.innerHTML = `<span class="badge badge-success badge-sm">AI Done</span>
+              <span class="text-xs ml-1">${data.provider} · ${shapeCount} shapes, ${lineCount} lines</span>
+              <button class="btn btn-secondary btn-xs ml-2 send-to-lucid-btn" data-title="${data.ai_result?.title || 'AI Diagram'}">Send to Lucid</button>`;
+            setStep(3);
+            showToast(`AI processed: ${shapeCount} shapes, ${lineCount} lines`, 'alert-success');
+            document.querySelector(`#item-${itemId} .send-to-lucid-btn`).addEventListener('click', (e) => {
+              sendToLucid(e.target.dataset.title, itemId);
+            });
+            // Auto-send to Lucid
+            sendToLucid(data.ai_result?.title || 'AI Diagram', itemId);
+          } else {
+            statusEl.innerHTML = `<span class="badge badge-error badge-sm">AI Error</span>
+              <span class="text-xs ml-1">${data.error}</span>`;
+            showToast(data.error || 'AI processing failed', 'alert-error');
+          }
+        })
+        .catch(() => {
+          statusEl.innerHTML = '<span class="badge badge-error badge-sm">Network error</span>';
+          showToast('Network error', 'alert-error');
+        });
+    }
+
+    // --- Send to Lucid ---
+    function sendToLucid(title, itemId) {
+      const filename = lastAiFilename || '';
+      const statusEl = document.querySelector(`#item-${itemId} .upload-status`);
+      statusEl.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Sending to Lucid…';
+      setStep(3);
+      fetch('/api/send-to-lucid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lucid_document: lastLucidDoc, title, filename })
+      })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(({ ok, data }) => {
+          if (ok) {
+            const docId = data.lucid_response?.documentId || '';
+            const editUrl = data.lucid_response?.editUrl || '';
+            let link = '<span class="badge badge-success badge-sm">Sent to Lucid</span>';
+            if (editUrl) {
+              link += ` <a href="${editUrl}" target="_blank" class="link link-primary text-xs ml-1">Open in Lucidchart →</a>`;
+            }
+            statusEl.innerHTML = link;
+            setStep(4);
+            showToast('Document created in Lucid!', 'alert-success');
+          } else {
+            statusEl.innerHTML = `<span class="badge badge-error badge-sm">Lucid Error</span>
+              <span class="text-xs ml-1">${data.error}</span>`;
+            showToast(data.error || 'Lucid import failed', 'alert-error');
+          }
+        })
+        .catch(() => {
+          statusEl.innerHTML = '<span class="badge badge-error badge-sm">Network error</span>';
+          showToast('Network error', 'alert-error');
+        });
+    }
+
+    // --- DaisyUI Toast ---
+    function showToast(msg, type = 'alert-info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `alert ${type} shadow-lg`;
+      toast.innerHTML = `<span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 3000);
+    }
+
+    // --- Settings ---
+    // --- CBL Stats ---
+    function loadCblStats() {
+      fetch('/api/cbl-stats').then(r => r.json()).then(s => {
+        document.getElementById('cbl_status').textContent = s.available ? 'Active' : 'Fallback (JSON)';
+        document.getElementById('cbl_status').className = 'stat-value text-lg ' + (s.available ? 'text-success' : 'text-warning');
+        document.getElementById('cbl_db_name').textContent = s.db_name || '—';
+        document.getElementById('cbl_doc_count').textContent = s.doc_count ?? '—';
+        document.getElementById('cbl_db_dir').textContent = s.db_dir || '—';
+      }).catch(() => {});
+    }
+    document.getElementById('refreshCblStats').addEventListener('click', loadCblStats);
+
+    function loadSettings() {
+      Promise.all([
+        fetch('/api/credentials').then(r => r.json()),
+        fetch('/api/settings').then(r => r.json())
+      ]).then(([creds, settings]) => {
+        // AI provider selection
+        const selected = creds.selected_ai_provider || 'gemini';
+        const radio = document.querySelector(`input[name="ai_provider"][value="${selected}"]`);
+        if (radio) radio.checked = true;
+        // Lucid REST API
+        document.getElementById('lucid_key').value = creds.lucid?.api_key || '';
+        // API keys
+        document.getElementById('gemini_key').value = creds.gemini?.api_key || '';
+        document.getElementById('openai_key').value = creds.openai?.api_key || '';
+        document.getElementById('claude_key').value = creds.claude?.api_key || '';
+        document.getElementById('xai_key').value = creds.xai?.api_key || '';
+        // Timeouts from build config (read-only display)
+        document.getElementById('timeout_ai').value = settings.timeouts?.ai_api ?? 30;
+        document.getElementById('timeout_lucid').value = settings.timeouts?.lucid_api ?? 15;
+      }).catch(() => {});
+      loadCblStats();
+    }
+
+    document.getElementById('saveSettings').addEventListener('click', () => {
+      const selectedProvider = document.querySelector('input[name="ai_provider"]:checked')?.value || 'gemini';
+      const creds = {
+        selected_ai_provider: selectedProvider,
+        lucid: { api_key: document.getElementById('lucid_key').value },
+        gemini: { api_key: document.getElementById('gemini_key').value },
+        openai: { api_key: document.getElementById('openai_key').value },
+        claude: { api_key: document.getElementById('claude_key').value },
+        xai: { api_key: document.getElementById('xai_key').value },
+      };
+      fetch('/api/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(creds)
+      })
+        .then(r => r.json())
+        .then(() => {
+          showToast('Settings saved', 'alert-success');
+          settingsModal.close();
+          updateStatus();
+        })
+        .catch(() => showToast('Error saving settings', 'alert-error'));
+    });
+
+    // Load settings when modal opens
+    document.querySelector('[onclick="settingsModal.showModal()"]').addEventListener('click', loadSettings);
+
+    // --- Status Indicators ---
+    function updateStatus() {
+      fetch('/api/status').then(r => r.json()).then(s => {
+        setStatusBtn('statusCBL', s.cbl);
+        setStatusBtn('statusAI', s.ai);
+        setStatusBtn('statusLucid', s.lucid);
+      }).catch(() => {
+        setStatusBtn('statusCBL', false);
+        setStatusBtn('statusAI', false);
+        setStatusBtn('statusLucid', false);
+      });
+    }
+    function setStatusBtn(id, ok) {
+      const el = document.getElementById(id);
+      el.classList.remove('btn-success', 'btn-error', 'btn-ghost');
+      el.classList.add(ok ? 'btn-success' : 'btn-error');
+    }
+    updateStatus();
+    setInterval(updateStatus, 30000);
+
+    // --- Image History ---
+    let currentPage = 0;
+    const PAGE_SIZE = 10;
+
+    function loadImages() {
+      const offset = currentPage * PAGE_SIZE;
+      fetch(`/api/images?limit=${PAGE_SIZE}&offset=${offset}`).then(r => r.json()).then(data => {
+        const tbody = document.getElementById('imageHistoryBody');
+        const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
+        document.getElementById('pageInfo').textContent = `Page ${currentPage + 1} of ${totalPages}`;
+        document.getElementById('prevPage').disabled = currentPage === 0;
+        document.getElementById('nextPage').disabled = (currentPage + 1) >= totalPages;
+
+        if (!data.images.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-base-content/40">No images yet</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.images.map(img => {
+          const d = new Date(img.timestamp * 1000);
+          const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          const statusBadge = {
+            'uploaded': 'badge-info',
+            'ai_processing': 'badge-warning',
+            'ai_done': 'badge-accent',
+            'lucid_sending': 'badge-warning',
+            'done': 'badge-success',
+            'error': 'badge-error',
+          }[img.status] || 'badge-ghost';
+          const statusLabel = img.status === 'error'
+            ? `Error (${img.error_source || '?'})`
+            : img.status?.replace(/_/g, ' ') || '—';
+          const aiInfo = img.ai_provider
+            ? `${img.ai_provider}/${img.ai_model || '?'}${img.ai_duration_s ? ' · ' + img.ai_duration_s + 's' : ''}`
+            : '—';
+          return `<tr>
+            <td><img src="/uploads/${img.filename}" class="w-10 h-10 object-cover rounded" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'"/></td>
+            <td class="text-sm">${img.filename}</td>
+            <td class="text-xs text-base-content/60">${dateStr}</td>
+            <td><span class="badge badge-sm ${statusBadge}">${statusLabel}</span></td>
+            <td class="text-xs text-base-content/60">${aiInfo}</td>
+            <td><button class="btn btn-xs btn-error btn-outline delete-img-btn" data-id="${img.id}">✕</button></td>
+          </tr>`;
+        }).join('');
+        tbody.querySelectorAll('.delete-img-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            fetch(`/api/images/${btn.dataset.id}`, { method: 'DELETE' })
+              .then(r => r.json())
+              .then(() => loadImages())
+              .catch(() => showToast('Delete failed', 'alert-error'));
+          });
+        });
+      });
+    }
+
+    document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 0) { currentPage--; loadImages(); } });
+    document.getElementById('nextPage').addEventListener('click', () => { currentPage++; loadImages(); });
+    loadImages();
+
+    // --- Debug Console (only active with ?debug=true) ---
+    const DEBUG_MODE = new URLSearchParams(window.location.search).get('debug') === 'true';
+    let debugOpen = false;
+    let debugSince = 0;
+    let debugPollInterval = null;
+
+    const debugConsole = document.getElementById('debugConsole');
+    const debugLogBody = document.getElementById('debugLogBody');
+    const debugToggleBtn = document.getElementById('debugToggleBtn');
+    const debugCloseBtn = document.getElementById('debugCloseBtn');
+    const debugClearBtn = document.getElementById('debugClearBtn');
+    const debugAutoScroll = document.getElementById('debugAutoScroll');
+    const debugEntryCount = document.getElementById('debugEntryCount');
+
+    if (DEBUG_MODE) {
+      debugToggleBtn.classList.remove('hidden');
+      debugConsole.classList.remove('hidden');
+    }
+
+    function toggleDebug() {
+      if (!DEBUG_MODE) return;
+      debugOpen = !debugOpen;
+      debugConsole.classList.toggle('translate-y-full', !debugOpen);
+      debugToggleBtn.classList.toggle('btn-active', debugOpen);
+      if (debugOpen) {
+        startDebugPolling();
+      } else {
+        stopDebugPolling();
+      }
+    }
+
+    debugToggleBtn.addEventListener('click', toggleDebug);
+    debugCloseBtn.addEventListener('click', toggleDebug);
+
+    debugClearBtn.addEventListener('click', () => {
+      fetch('/api/debug-log', { method: 'DELETE' });
+      debugLogBody.innerHTML = '';
+      debugSince = 0;
+      debugEntryCount.textContent = '0 entries';
+    });
+
+    document.getElementById('debugResendAI').addEventListener('click', () => {
+      if (lastAiFilename && lastAiItemId) sendToAI(lastAiFilename, lastAiItemId);
+    });
+
+    document.getElementById('debugResendLucid').addEventListener('click', () => {
+      if (lastLucidDoc && lastAiItemId) sendToLucid(lastAiTitle || 'AI Diagram', lastAiItemId);
+    });
+
+    const stageColors = {
+      'upload': 'text-info',
+      'cbl-save': 'text-accent',
+      'config': 'text-base-content/60',
+      'ai-request': 'text-warning',
+      'ai-response': 'text-success',
+      'ai-error': 'text-error',
+      'lucid-request': 'text-warning',
+      'lucid-response': 'text-success',
+      'lucid-error': 'text-error',
+    };
+
+    function renderDebugEntry(entry) {
+      const d = new Date(entry.ts * 1000);
+      const time = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      const ms = String(d.getMilliseconds()).padStart(3, '0');
+      const colorClass = stageColors[entry.stage] || 'text-base-content';
+      const stageLabel = entry.stage.toUpperCase().padEnd(14);
+      let html = `<div class="py-0.5 border-b border-base-content/5 hover:bg-base-content/5">`;
+      html += `<span class="text-base-content/40">${time}.${ms}</span> `;
+      html += `<span class="${colorClass} font-bold">[${stageLabel}]</span> `;
+      html += `<span>${entry.message}</span>`;
+      if (entry.detail) {
+        html += `<div class="ml-24 text-base-content/50 break-all">${entry.detail}</div>`;
+      }
+      html += `</div>`;
+      return html;
+    }
+
+    function pollDebugLog() {
+      fetch(`/api/debug-log?since=${debugSince}`).then(r => r.json()).then(data => {
+        if (data.entries && data.entries.length > 0) {
+          data.entries.forEach(e => {
+            debugLogBody.insertAdjacentHTML('beforeend', renderDebugEntry(e));
+            debugSince = Math.max(debugSince, e.ts);
+          });
+          const totalCount = debugLogBody.children.length;
+          debugEntryCount.textContent = `${totalCount} entries`;
+          if (debugAutoScroll.checked) {
+            debugLogBody.scrollTop = debugLogBody.scrollHeight;
+          }
+        }
+      }).catch(() => {});
+    }
+
+    function startDebugPolling() {
+      pollDebugLog();
+      debugPollInterval = setInterval(pollDebugLog, 1000);
+    }
+
+    function stopDebugPolling() {
+      if (debugPollInterval) {
+        clearInterval(debugPollInterval);
+        debugPollInterval = null;
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucid – Settings Guide</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="min-h-screen bg-base-200">
+
+  <!-- Navbar -->
+  <div class="navbar bg-base-100 shadow-sm">
+    <div class="flex-1 gap-2">
+      <a class="btn btn-ghost text-xl text-primary" href="/">Lucid</a>
+      <a class="btn btn-ghost btn-sm gap-1" href="/">← Back to App</a>
+    </div>
+    <div class="flex-none flex items-center gap-2">
+      <!-- Theme Toggle -->
+      <label class="toggle text-base-content" title="Toggle theme">
+        <input type="checkbox" id="themeToggle" class="theme-controller" />
+        <svg aria-label="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg aria-label="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </label>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-3xl mx-auto py-10 px-4">
+
+    <h1 class="text-3xl font-bold text-primary mb-2">Settings Guide</h1>
+    <p class="text-base-content/60 mb-8">How to configure each section in the Lucid settings panel.</p>
+
+    <!-- 1. Lucid REST API -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <h2 class="card-title">
+          <span class="badge badge-primary badge-lg font-mono">1</span>
+          Lucid REST API
+        </h2>
+        <p class="mt-2">Connects to the <a href="https://lucid.co" target="_blank" class="link link-primary">Lucid.co</a> visual collaboration platform. The API key is a Bearer token for authenticating with <code>https://api.lucid.co</code>.</p>
+
+        <h3 class="font-semibold mt-4 mb-2">How to get an API key</h3>
+        <ol class="list-decimal list-inside space-y-2 text-sm">
+          <li>Go to <a href="https://lucid.app/developer#/apikeys" target="_blank" class="link link-primary">lucid.app/developer → API Keys</a>.</li>
+          <li>Click <strong>Create API Key</strong>.</li>
+          <li>Set a name and expiration date for the key.</li>
+          <li>Set the grants (permissions) as shown in the table below.</li>
+          <li>Click <strong>Generate API key</strong> and save it securely — you won't see it again.</li>
+          <li>Paste the key into the Lucid REST API field in Settings.</li>
+        </ol>
+
+        <h3 class="font-semibold mt-4 mb-2">Required Grants</h3>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Grant</th>
+                <th>Set To</th>
+                <th>Why</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">Documents</td>
+                <td><span class="badge badge-primary badge-sm">Read and Write</span></td>
+                <td>Required to create diagrams via the Standard Import API (<code>POST /documents</code>).</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Users</td>
+                <td><span class="badge badge-ghost badge-sm">None</span></td>
+                <td>Optional — not required for core functionality.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Folders</td>
+                <td><span class="badge badge-ghost badge-sm">None</span></td>
+                <td>Optional — set to Read if you want to target a specific folder.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Accounts</td>
+                <td><span class="badge badge-ghost badge-sm">None</span></td>
+                <td>Not needed.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Teams</td>
+                <td><span class="badge badge-ghost badge-sm">None</span></td>
+                <td>Not needed.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-warning mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          <span>Requires a licensed Lucid account with developer tools unlocked. Grants cannot be changed after creating a key — create a new key if you need different permissions.</span>
+        </div>
+
+        <p class="text-sm mt-3">📖 Full documentation: <a href="https://developer.lucid.co/docs/api-keys" target="_blank" class="link link-primary">developer.lucid.co/docs/api-keys</a></p>
+      </div>
+    </div>
+
+    <!-- 2. Active AI Provider -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <h2 class="card-title">
+          <span class="badge badge-primary badge-lg font-mono">2</span>
+          Active AI Provider
+        </h2>
+        <p class="mt-2">This radio selector chooses which AI provider processes your uploaded images. Only one provider can be active at a time.</p>
+
+        <ol class="list-decimal list-inside mt-4 space-y-2 text-sm">
+          <li>Open Settings and expand the <strong>Active AI Provider</strong> section.</li>
+          <li>Select the provider you want to use (Gemini, OpenAI, Claude, or xAI).</li>
+          <li>Enter the API key for the selected provider in its own section below.</li>
+          <li>Click <strong>Save Settings</strong>.</li>
+        </ol>
+
+        <div class="alert alert-warning mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          <span>You must also enter the API key for your selected provider — choosing a provider alone is not enough. The navbar status indicator checks connectivity for the selected provider only.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. AI Provider API Keys -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <h2 class="card-title">
+          <span class="badge badge-primary badge-lg font-mono">3</span>
+          AI Provider API Keys
+        </h2>
+        <p class="mt-2">You only need an API key for the one provider you've selected above. Enter it in the matching section in Settings.</p>
+
+        <div class="overflow-x-auto mt-4">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Where to get a key</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">Gemini (Google)</td>
+                <td><a href="https://aistudio.google.com/apikey" target="_blank" class="link link-primary">aistudio.google.com/apikey</a></td>
+              </tr>
+              <tr>
+                <td class="font-semibold">OpenAI</td>
+                <td><a href="https://platform.openai.com/api-keys" target="_blank" class="link link-primary">platform.openai.com/api-keys</a></td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Claude (Anthropic)</td>
+                <td><a href="https://console.anthropic.com/settings/keys" target="_blank" class="link link-primary">console.anthropic.com/settings/keys</a></td>
+              </tr>
+              <tr>
+                <td class="font-semibold">xAI (Grok)</td>
+                <td><a href="https://console.x.ai" target="_blank" class="link link-primary">console.x.ai</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-info mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          <span>Only one AI provider is used at a time. You can enter keys for multiple providers and switch between them in the Active AI Provider section.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Timeouts -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <h2 class="card-title">
+          <span class="badge badge-primary badge-lg font-mono">4</span>
+          Timeouts
+          <span class="badge badge-ghost badge-sm ml-auto">Read-only</span>
+        </h2>
+        <p class="mt-2">These values are set in <code>config.json</code> at build time and cannot be changed from the UI.</p>
+
+        <div class="overflow-x-auto mt-4">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Setting</th>
+                <th>Description</th>
+                <th>Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">AI API Timeout</td>
+                <td>Maximum seconds to wait for an AI provider response.</td>
+                <td><code>30</code></td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Lucid API Timeout</td>
+                <td>Maximum seconds to wait for the Lucid REST API response.</td>
+                <td><code>15</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-info mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          <span>To change these values, edit <code>config.json</code> and rebuild the Docker container.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Couchbase Lite -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <h2 class="card-title">
+          <span class="badge badge-primary badge-lg font-mono">5</span>
+          Couchbase Lite
+          <span class="badge badge-ghost badge-sm ml-auto">Read-only</span>
+        </h2>
+        <p class="mt-2">Couchbase Lite is the local embedded database that runs inside the Docker container. It stores uploaded image metadata and AI results locally.</p>
+
+        <div class="alert alert-info mt-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          <span>No setup needed — Couchbase Lite is configured automatically when the container starts.</span>
+        </div>
+
+        <div class="overflow-x-auto mt-4">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Stat</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">Status</td>
+                <td><strong>Active</strong> = the CBL library loaded successfully. <strong>Fallback</strong> = CBL is unavailable and the app is using JSON files for storage instead.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Database</td>
+                <td>The name of the Couchbase Lite database in use.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Document Count</td>
+                <td>Total number of documents stored locally (images, metadata, etc.).</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Path</td>
+                <td>The filesystem path inside the container where the database files are stored.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Status Indicators -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <h2 class="card-title">
+          <span class="badge badge-primary badge-lg font-mono">6</span>
+          Status Indicators
+        </h2>
+        <p class="mt-2">The three dots in the navbar show real-time connectivity status. They refresh automatically every 30 seconds.</p>
+
+        <div class="overflow-x-auto mt-4">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Indicator</th>
+                <th>🟢 Green</th>
+                <th>🔴 Red</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">CBL</td>
+                <td>Couchbase Lite library loaded and active.</td>
+                <td>CBL not available; app is using fallback storage.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">AI API</td>
+                <td>Selected AI provider is reachable and responding.</td>
+                <td>Unreachable, or no API key set for the selected provider.</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Lucid</td>
+                <td>Lucid REST API authenticated and responding.</td>
+                <td>Unreachable, or no API key set.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-info mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+          <span>If a dot is red, open Settings and verify the corresponding API key is entered correctly.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Theme ---
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('lucid-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    themeToggle.checked = savedTheme === 'dark';
+    themeToggle.addEventListener('change', () => {
+      const theme = themeToggle.checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('lucid-theme', theme);
+    });
+  </script>
+
+</body>
+</html>
