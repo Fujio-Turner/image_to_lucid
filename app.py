@@ -491,6 +491,37 @@ AI_PROVIDERS = {
 }
 
 
+def _normalize_color(value):
+    """Ensure color is a valid 7-char hex string (#RRGGBB). Strip alpha, fix shorthand."""
+    if not isinstance(value, str):
+        return "#FFFFFF"
+    value = value.strip()
+    if not value.startswith("#"):
+        value = "#" + value
+    hex_part = value[1:]
+    hex_part = "".join(c for c in hex_part if c in "0123456789abcdefABCDEF")
+    if len(hex_part) == 3:
+        hex_part = "".join(c * 2 for c in hex_part)
+    if len(hex_part) == 8:
+        hex_part = hex_part[:6]
+    if len(hex_part) != 6:
+        return "#FFFFFF"
+    return "#" + hex_part.upper()
+
+
+def _sanitize_shapes(shapes):
+    """Sanitize color values in shapes so Lucid accepts them."""
+    for shape in shapes:
+        style = shape.get("style", {})
+        fill = style.get("fill", {})
+        if "color" in fill:
+            fill["color"] = _normalize_color(fill["color"])
+        stroke = style.get("stroke", {})
+        if "color" in stroke:
+            stroke["color"] = _normalize_color(stroke["color"])
+    return shapes
+
+
 def _build_lucid_document(ai_result):
     """Convert AI result into Lucid Standard Import document.json format."""
     return {
@@ -498,7 +529,7 @@ def _build_lucid_document(ai_result):
         "pages": [{
             "id": "page1",
             "title": ai_result.get("title", "AI Generated Diagram"),
-            "shapes": ai_result.get("shapes", []),
+            "shapes": _sanitize_shapes(ai_result.get("shapes", [])),
             "lines": ai_result.get("lines", []),
             "groups": [],
             "layers": [],
