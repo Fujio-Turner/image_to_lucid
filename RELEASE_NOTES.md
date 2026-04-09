@@ -1,5 +1,33 @@
 # Release Notes
 
+## v1.1.0 — Image Optimization & User-Controlled Processing
+
+### New Features
+
+- **Image optimization** — All images are automatically downscaled (max 1500px) and re-encoded as JPEG (quality 85) before sending to AI APIs, reducing payload size and speeding up processing
+- **Optimize Image toggle** — DaisyUI toggle next to the file input (on by default) lets users control whether optimization is applied
+- **Image metadata preview** — After upload, displays original vs. optimized file size (KB/MB), dimensions, and estimated token count; updates in real-time when toggling optimization
+- **Process Image button** — Replaces auto-processing; users can review metadata and settings before sending to the AI API
+- **Delete button** — Lets users remove a mistaken upload before processing
+- **Cancel button** — Process button converts to a red Cancel button during AI/Lucid API requests; uses `AbortController` to abort in-flight fetches
+- **`/api/image-meta` endpoint** — Returns original and optimized image metadata (size, dimensions, estimated tokens) for the UI preview
+
+### Improvements
+
+- **Filename column overflow fix** — Recent Images table uses `table-fixed` layout with explicit column widths and `truncate` on filenames to prevent horizontal scrolling
+- **Auto-chain preserved** — After clicking Process, the AI → Lucid pipeline still runs automatically; only the initial trigger requires user action
+- **Process button restore** — On error or cancel, the Process + Delete buttons are automatically restored for retry
+
+### Dependencies
+
+- Added **Pillow** to `requirements.txt` for image resizing and re-encoding
+
+### Tests
+
+- 15 new unit tests (48 total) covering `_optimize_image`, `_encode_image_b64`, `/api/image-meta`, and optimize flag passthrough
+
+---
+
 ## v1.0.0 — Initial Release
 
 ### Features

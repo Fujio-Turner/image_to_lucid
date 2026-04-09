@@ -1,4 +1,4 @@
-# Lucid v1.0.0
+# Lucid v1.1.0
 
 ![Image to Lucidchart - AI-Powered Diagram Conversion](img/hero.png)
 
@@ -14,7 +14,8 @@ An image-to-Lucidchart pipeline built with **Flask**, **Couchbase Lite CE** (C e
 
 ## Features
 
-- **Automated pipeline** — Upload → AI → Lucidchart, fully automatic end-to-end
+- **Image optimization** — Automatic downscaling (max 1500px) and JPEG re-encoding before sending to AI, with toggleable Optimize Image control and real-time metadata preview (size, dimensions, est. tokens)
+- **User-controlled pipeline** — Upload → review metadata → Process → AI → Lucid, with Cancel and Delete buttons
 - **Multi-provider AI support** — Gemini (`gemini-2.0-flash`), OpenAI (`gpt-4o`), Claude (`claude-sonnet-4-20250514`), xAI/Grok (`grok-4.20-reasoning`)
 - **Lucidchart Standard Import API** integration — creates diagrams automatically from AI analysis
 - **Drag & drop / browse** image upload (PNG, JPEG, JPG)
@@ -105,7 +106,8 @@ Credentials are stored in the Couchbase Lite embedded database inside the contai
 | `GET` | `/uploads/<filename>` | Serve an uploaded image |
 | `GET` | `/api/images?limit=10&offset=0` | Paginated image history |
 | `DELETE` | `/api/images/<doc_id>` | Delete an image record |
-| `POST` | `/api/process` | Send image to AI provider for analysis |
+| `POST` | `/api/image-meta` | Get original/optimized image metadata (size, dimensions, tokens) |
+| `POST` | `/api/process` | Send image to AI provider for analysis (accepts `optimize` flag) |
 | `POST` | `/api/send-to-lucid` | Create Lucidchart document from AI result |
 | `GET` | `/api/credentials` | Get saved API credentials |
 | `POST` | `/api/credentials` | Save API credentials |
@@ -222,7 +224,7 @@ python -m pytest test_app.py -v
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.12, Flask |
+| Backend | Python 3.12, Flask, Pillow |
 | Embedded DB | Couchbase Lite CE 3.2.1 (C SDK + CFFI) |
 | Frontend | DaisyUI 5, Tailwind CSS 4 (CDN) |
 | Container | Docker, Docker Compose |
