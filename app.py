@@ -325,43 +325,102 @@ def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
-LUCID_SCHEMA_PROMPT = """Analyze this image and extract all visual elements into a structured JSON object.
-Return ONLY valid JSON with this exact schema — no markdown, no explanation:
+LUCID_SCHEMA_PROMPT = """Analyze this image and extract all visual elements into a structured JSON object compatible with Lucid Standard Import.
+Return ONLY valid JSON with this exact top-level schema — no markdown, no explanation:
 {
   "title": "short descriptive title of the diagram",
-  "shapes": [
-    {
-      "id": "shape1",
-      "type": "rectangle",
-      "text": "label text inside the shape",
-      "boundingBox": {"x": 100, "y": 100, "w": 200, "h": 80},
-      "style": {
-        "fill": {"type": "color", "color": "#FFFFFF"},
-        "stroke": {"color": "#333333", "width": 2, "style": "solid"},
-        "rounding": 0
-      }
-    }
-  ],
-  "lines": [
-    {
-      "id": "line1",
-      "lineType": "straight",
-      "endpoint1": {"type": "shapeEndpoint", "style": "none", "shapeId": "shape1"},
-      "endpoint2": {"type": "shapeEndpoint", "style": "arrow", "shapeId": "shape2"},
-      "text": [{"text": "optional label", "position": 0.5, "side": "middle"}]
-    }
-  ]
+  "shapes": [ ... ],
+  "lines": [ ... ],
+  "groups": [ ... ],
+  "layers": [ ... ]
 }
-Rules:
-- Use ONLY these shape types: rectangle, circle, cloud, cross, diamond, doubleArrow, hexagon, isoscelesTriangle, octagon, pentagon, rightTriangle, singleArrow, text
+
+=== SHAPES ===
+Each shape object requires: id (unique string), type, and boundingBox.
+Optional properties: style, text, opacity (0-100, default 100), note, zIndex, customData, actions.
+
+boundingBox format: {"x": 100, "y": 100, "w": 200, "h": 80, "rotation": 0}
+  - rotation is optional (0-360 degrees clockwise).
+
+style format:
+{
+  "fill": {"type": "color", "color": "#FFFFFF"},
+  "stroke": {"color": "#333333", "width": 2, "style": "solid"},
+  "rounding": 0,
+  "textColor": "#000000"
+}
+  - fill can also be {"type": "image", "url": "https://..."} with optional "imageScale": "fit"|"fill"|"stretch"|"original"|"tile".
+  - stroke.style: "solid", "dashed", or "dotted".
+  - rounding: integer, double the corner radius in pixels.
+
+Allowed shape types by library:
+
+Standard Library: rectangle, text, image, stickyNote, hotspot
+Shape Library: circle, cloud, cross, diamond, doubleArrow, flexiblePolygon, hexagon, isoscelesTriangle, octagon, pentagon, polyStar, rightTriangle, singleArrow
+  - singleArrow has optional "orientation": "right"|"left"|"up"|"down".
+  - cross has optional "indent": {"x": 0.25, "y": 0.25}.
+  - polyStar requires "shape": {"numPoints": 5, "innerRadius": 0.5}.
+  - flexiblePolygon requires "vertices": [{"x":0,"y":0}, {"x":1,"y":0}, {"x":0.5,"y":1}] (3-100 relative positions).
+
+Flowchart Library: process, decision, terminator, data, database, document, multipleDocuments, predefinedProcess, storedData, internalStorage, manualInput, manualOperation, preparation, display, delay, merge, connector, note, offPageLink, paperTape, directAccessStorage, or, summingJunction, braceNote
+  - predefinedProcess requires "sideWidth": 0.1 (0 to 0.33).
+  - braceNote requires "rightFacing": true/false and "braceWidth": 60.
+  - "or" and "summingJunction" do NOT accept text.
+
+Container Library: rectangleContainer, roundedRectangleContainer, circleContainer, diamondContainer, pillContainer, braceContainer, bracketContainer, swimLanes
+  - Containers have optional "magnetize": true, "containerTitle": {"text": "Title"}, "assistedLayout": true.
+  - swimLanes requires "vertical": bool, "titleBar": {"height": 50, "verticalText": true}, "lanes": [{"title": "Lane 1", "width": 300, "headerFill": "#E0E0E0", "laneFill": "#FFFFFF"}].
+
+Table Library: table
+  - Requires "rowCount", "colCount", "cells": [{"xPosition": 0, "yPosition": 0, "text": "Cell text", "style": {"fill": {"type":"color","color":"#FFF"}}, "mergeCellsRight": 0, "mergeCellsDown": 0}].
+  - Optional "userSpecifiedRows": [{"index": 0, "size": 40}], "userSpecifiedCols": [{"index": 0, "size": 160}].
+
+=== LINES ===
+Each line requires: id, lineType, endpoint1, endpoint2.
+Optional: stroke, text, customData, joints, elbowControlPoints, zIndex.
+
+lineType: "straight", "elbow", or "curved".
+
+Endpoint types:
+  - shapeEndpoint: {"type": "shapeEndpoint", "style": "arrow", "shapeId": "shape1"} — omit "position" for auto-routing (smart lines).
+  - positionEndpoint: {"type": "positionEndpoint", "style": "none", "position": {"x": 100, "y": 200}} — for free-floating line ends.
+  - lineEndpoint: {"type": "lineEndpoint", "style": "arrow", "lineId": "line2", "position": 0.5} — attach to another line.
+
+Endpoint styles: none, arrow, hollowArrow, openArrow, aggregation, composition, generalization, closedCircle, openCircle, closedSquare, openSquare, async1, async2, one, many, oneOrMore, zeroOrMore, zeroOrOne, exactlyOne, nesting, bpmnConditional, bpmnDefault.
+
+Line text MUST be an array: [{"text": "label", "position": 0.5, "side": "middle"}]. Use [] if no label.
+  - side: "top", "middle", or "bottom".
+  - position: 0.0 to 1.0 (relative position along the line).
+
+=== GROUPS ===
+{"id": "group1", "items": ["shape1", "shape2", "line1"], "zIndex": 0}
+  - items: array of shape, line, or other group IDs.
+
+=== LAYERS ===
+{"id": "layer1", "title": "Background", "items": ["shape1", "line1"], "layerIndex": 0}
+
+=== RULES ===
+- Choose the most semantically appropriate shape type for what the image depicts. Use flowchart types for flowcharts, containers for groupings, tables for tabular data, etc.
 - For rounded rectangles, use type "rectangle" with "rounding": 20 in the style.
-- Position shapes on a grid starting at x=100,y=100. Space shapes ~250px apart horizontally, ~150px vertically.
-- Every connection must reference existing shape IDs.
-- lineType must be one of: straight, elbow, curved
-- Line "text" MUST be an array of objects: [{"text":"label","position":0.5,"side":"middle"}]. Use empty array [] if no label.
+- Position shapes on a grid starting at x=100, y=100. Space shapes ~250px apart horizontally, ~150px vertically.
+- Use hex colors (#RRGGBB) from the image. Default fill #FFFFFF, stroke #333333.
 - Do NOT include "position" in shapeEndpoint — omit it so Lucid auto-routes lines.
-- Use hex colors from the image. Default fill #FFFFFF, stroke #333333.
-- Extract ALL text visible in the image."""
+- Extract ALL text visible in the image.
+- Use groups to logically cluster related shapes.
+- Only include groups and layers arrays if appropriate for the diagram; otherwise use empty arrays.
+
+=== CRITICAL — REFERENCE INTEGRITY ===
+Before returning your JSON, you MUST self-validate:
+1. Build a list of every shape "id" you defined in the "shapes" array.
+2. Build a list of every line "id" you defined in the "lines" array.
+3. For EVERY line endpoint, check:
+   - If type is "shapeEndpoint", the "shapeId" MUST match an id from your shapes list.
+   - If type is "lineEndpoint", the "lineId" MUST match an id from your lines list.
+4. For EVERY group, every item in "items" MUST match a shape, line, or group id you defined.
+5. For EVERY layer, every item in "items" MUST match a shape, line, or group id you defined.
+6. If any reference does not match, fix it — either correct the id to the right one, or remove the line/item.
+7. Do NOT invent or hallucinate IDs. Only use IDs you have explicitly defined in shapes or lines.
+Count your shapes and lines, then count the distinct IDs referenced by endpoints — they must all resolve."""
 
 
 IMAGE_OPTIMIZE_MAX_DIMENSION = 1500
@@ -404,16 +463,24 @@ def _get_mime_type(filename):
     return {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}.get(ext, "image/png")
 
 
-def _call_gemini(api_key, filepath, filename, timeout, optimize=True):
+def _build_prompt(user_prompt=""):
+    """Build the full prompt, appending user instructions if provided."""
+    if user_prompt:
+        return LUCID_SCHEMA_PROMPT + "\n\nAdditional user instructions:\n" + user_prompt
+    return LUCID_SCHEMA_PROMPT
+
+
+def _call_gemini(api_key, filepath, filename, timeout, optimize=True, user_prompt=""):
     b64, was_optimized = _encode_image_b64(filepath, optimize)
     mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
+    prompt = _build_prompt(user_prompt)
     resp = requests.post(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
         params={"key": api_key},
         headers={"Content-Type": "application/json"},
         json={
             "contents": [{"parts": [
-                {"text": LUCID_SCHEMA_PROMPT},
+                {"text": prompt},
                 {"inline_data": {"mime_type": mime, "data": b64}}
             ]}],
             "generationConfig": {"responseMimeType": "application/json"}
@@ -425,9 +492,10 @@ def _call_gemini(api_key, filepath, filename, timeout, optimize=True):
     return json.loads(text)
 
 
-def _call_openai(api_key, filepath, filename, timeout, optimize=True):
+def _call_openai(api_key, filepath, filename, timeout, optimize=True, user_prompt=""):
     b64, was_optimized = _encode_image_b64(filepath, optimize)
     mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
+    prompt = _build_prompt(user_prompt)
     resp = requests.post(
         "https://api.openai.com/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -435,7 +503,7 @@ def _call_openai(api_key, filepath, filename, timeout, optimize=True):
             "model": "gpt-4o",
             "response_format": {"type": "json_object"},
             "messages": [{"role": "user", "content": [
-                {"type": "text", "text": LUCID_SCHEMA_PROMPT},
+                {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
             ]}],
             "max_tokens": 4096,
@@ -447,9 +515,10 @@ def _call_openai(api_key, filepath, filename, timeout, optimize=True):
     return json.loads(text)
 
 
-def _call_claude(api_key, filepath, filename, timeout, optimize=True):
+def _call_claude(api_key, filepath, filename, timeout, optimize=True, user_prompt=""):
     b64, was_optimized = _encode_image_b64(filepath, optimize)
     mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
+    prompt = _build_prompt(user_prompt)
     resp = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
@@ -462,7 +531,7 @@ def _call_claude(api_key, filepath, filename, timeout, optimize=True):
             "max_tokens": 4096,
             "messages": [{"role": "user", "content": [
                 {"type": "image", "source": {"type": "base64", "media_type": mime, "data": b64}},
-                {"type": "text", "text": LUCID_SCHEMA_PROMPT}
+                {"type": "text", "text": prompt}
             ]}],
         },
         timeout=timeout,
@@ -475,9 +544,10 @@ def _call_claude(api_key, filepath, filename, timeout, optimize=True):
     return json.loads(text)
 
 
-def _call_xai(api_key, filepath, filename, timeout, optimize=True):
+def _call_xai(api_key, filepath, filename, timeout, optimize=True, user_prompt=""):
     b64, was_optimized = _encode_image_b64(filepath, optimize)
     mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
+    prompt = _build_prompt(user_prompt)
     resp = requests.post(
         "https://api.x.ai/v1/responses",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -485,7 +555,7 @@ def _call_xai(api_key, filepath, filename, timeout, optimize=True):
             "model": "grok-4.20-reasoning",
             "input": [{"role": "user", "content": [
                 {"type": "input_image", "image_url": f"data:{mime};base64,{b64}"},
-                {"type": "input_text", "text": LUCID_SCHEMA_PROMPT},
+                {"type": "input_text", "text": prompt},
             ]}],
         },
         timeout=timeout,
@@ -553,17 +623,76 @@ def _sanitize_shapes(shapes):
     return shapes
 
 
+def _validate_references(shapes, lines, groups, layers):
+    """Remove lines/groups/layers that reference non-existent IDs."""
+    shape_ids = {s["id"] for s in shapes if "id" in s}
+    line_ids = {l["id"] for l in lines if "id" in l}
+    all_ids = shape_ids | line_ids
+
+    def _endpoint_valid(ep):
+        ep_type = ep.get("type", "")
+        if ep_type == "shapeEndpoint":
+            return ep.get("shapeId") in shape_ids
+        if ep_type == "lineEndpoint":
+            return ep.get("lineId") in line_ids
+        if ep_type == "positionEndpoint":
+            return True
+        return True
+
+    valid_lines = []
+    for line in lines:
+        ep1 = line.get("endpoint1", {})
+        ep2 = line.get("endpoint2", {})
+        if _endpoint_valid(ep1) and _endpoint_valid(ep2):
+            valid_lines.append(line)
+        else:
+            debug_log("validate", f"Dropped line with invalid reference: {line.get('id','?')}",
+                      f"ep1={ep1.get('shapeId', ep1.get('lineId',''))}, ep2={ep2.get('shapeId', ep2.get('lineId',''))}")
+
+    # Recalculate valid IDs after dropping bad lines
+    valid_line_ids = {l["id"] for l in valid_lines if "id" in l}
+    all_valid_ids = shape_ids | valid_line_ids
+
+    valid_groups = []
+    for group in groups:
+        items = group.get("items", [])
+        filtered = [i for i in items if i in all_valid_ids]
+        if filtered:
+            group["items"] = filtered
+            valid_groups.append(group)
+            all_valid_ids.add(group["id"])
+
+    valid_layers = []
+    for layer in layers:
+        items = layer.get("items", [])
+        filtered = [i for i in items if i in all_valid_ids]
+        if filtered:
+            layer["items"] = filtered
+            valid_layers.append(layer)
+
+    dropped = len(lines) - len(valid_lines)
+    if dropped:
+        debug_log("validate", f"Dropped {dropped} line(s) with invalid references")
+
+    return valid_lines, valid_groups, valid_layers
+
+
 def _build_lucid_document(ai_result):
     """Convert AI result into Lucid Standard Import document.json format."""
+    shapes = _sanitize_shapes(ai_result.get("shapes", []))
+    lines = ai_result.get("lines", [])
+    groups = ai_result.get("groups", [])
+    layers = ai_result.get("layers", [])
+    lines, groups, layers = _validate_references(shapes, lines, groups, layers)
     return {
         "version": 1,
         "pages": [{
             "id": "page1",
             "title": ai_result.get("title", "AI Generated Diagram"),
-            "shapes": _sanitize_shapes(ai_result.get("shapes", [])),
-            "lines": ai_result.get("lines", []),
-            "groups": [],
-            "layers": [],
+            "shapes": shapes,
+            "lines": lines,
+            "groups": groups,
+            "layers": layers,
         }],
     }
 
@@ -593,15 +722,19 @@ def image_meta():
     img = Image.open(filepath)
     orig_w, orig_h = img.size
 
-    # Estimate token count: ~1 token per 750 bytes of base64
+    # Estimate token count: ~1 token per 4 chars for text, ~1 per 750 bytes of base64 for images
+    prompt_tokens = len(LUCID_SCHEMA_PROMPT) // 4
     original_b64_size = (original_size * 4) // 3
-    original_tokens = original_b64_size // 750
+    original_image_tokens = original_b64_size // 750
+    original_tokens = original_image_tokens + prompt_tokens
 
     result = {
+        "promptTokens": prompt_tokens,
         "original": {
             "size": original_size,
             "width": orig_w,
             "height": orig_h,
+            "imageTokens": original_image_tokens,
             "tokens": original_tokens,
         },
     }
@@ -620,11 +753,13 @@ def image_meta():
     opt_img.save(buf, format="JPEG", quality=85)
     opt_size = buf.tell()
     opt_b64_size = (opt_size * 4) // 3
-    opt_tokens = opt_b64_size // 750
+    opt_image_tokens = opt_b64_size // 750
+    opt_tokens = opt_image_tokens + prompt_tokens
     result["optimized"] = {
         "size": opt_size,
         "width": opt_w,
         "height": opt_h,
+        "imageTokens": opt_image_tokens,
         "tokens": opt_tokens,
     }
 
@@ -653,8 +788,9 @@ def process_image():
         return jsonify({"error": f"No API key configured for {provider}"}), 400
 
     optimize = data.get("optimize", True)
+    user_prompt = data.get("user_prompt", "").strip()
     timeout = BUILD_CONFIG.get("timeouts", {}).get("ai_api", 30)
-    debug_log("ai-request", f"Processing image: {filename}", f"provider={provider}, optimize={optimize}")
+    debug_log("ai-request", f"Processing image: {filename}", f"provider={provider}, optimize={optimize}, user_prompt={'yes' if user_prompt else 'no'}")
     ai_sent_at = time.time()
     _update_image_record(filename, {
         "status": "ai_processing",
@@ -665,7 +801,7 @@ def process_image():
 
     try:
         debug_log("ai-request", f"Sending to {provider} API", f"filepath={filepath}, timeout={timeout}, optimize={optimize}")
-        ai_result = AI_PROVIDERS[provider](api_key, filepath, filename, timeout, optimize)
+        ai_result = AI_PROVIDERS[provider](api_key, filepath, filename, timeout, optimize, user_prompt)
         debug_log("ai-response", f"AI response received from {provider}", f"shapes={len(ai_result.get('shapes',[]))}, lines={len(ai_result.get('lines',[]))}")
         ai_received_at = time.time()
         _update_image_record(filename, {
