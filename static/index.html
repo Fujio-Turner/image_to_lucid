@@ -375,6 +375,7 @@
     function renderMetaContent(meta, optimize) {
       const src = optimize ? meta.optimized : meta.original;
       const changed = meta.original.size !== meta.optimized.size;
+      const promptTokens = meta.promptTokens || 0;
       let html = `<span class="badge badge-sm ${optimize ? 'badge-primary' : 'badge-ghost'}">${optimize ? 'Optimized' : 'Original'}</span>`;
       html += `<span><b>Size:</b> ${formatSize(src.size)}`;
       if (optimize && changed) html += ` <span class="text-success">(was ${formatSize(meta.original.size)})</span>`;
@@ -383,6 +384,7 @@
       if (optimize && changed) html += ` <span class="text-success">(was ${meta.original.width}\u00d7${meta.original.height})</span>`;
       html += `</span>`;
       html += `<span><b>Est. tokens:</b> ~${formatTokens(src.tokens)}`;
+      html += ` <span class="text-base-content/40">(image ~${formatTokens(src.imageTokens || 0)} + prompt ~${formatTokens(promptTokens)})</span>`;
       if (optimize && changed) html += ` <span class="text-success">(was ~${formatTokens(meta.original.tokens)})</span>`;
       html += `</span>`;
       return html;
@@ -433,6 +435,11 @@
                 statusEl.innerHTML = `<span class="badge badge-success badge-sm">Uploaded</span>`;
                 cardBody.insertAdjacentHTML('beforeend',
                   `<div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/70 mt-1" id="meta-${id}">${renderMetaContent(meta, optimize)}</div>`);
+                cardBody.insertAdjacentHTML('beforeend', `
+                  <fieldset class="fieldset w-full mt-2">
+                    <legend class="fieldset-legend">AI Instructions <span class="text-base-content/40 font-normal">(optional)</span></legend>
+                    <textarea class="textarea textarea-bordered w-full text-sm user-prompt-input" id="prompt-${id}" rows="2" placeholder="e.g. &quot;Identify bottlenecks in this diagram&quot; or &quot;Add a pipeline at step X connecting back to Y&quot;"></textarea>
+                  </fieldset>`);
                 cardBody.insertAdjacentHTML('beforeend', `
                   <div class="mt-2 process-cancel-wrap flex gap-2">
                     <button class="btn btn-primary btn-wide process-btn" data-filename="${data.filename}" data-item-id="${id}">Process Image</button>
@@ -548,10 +555,13 @@
       const signal = activeAbort.signal;
       showCancelButton(itemId);
 
+      const promptEl = document.getElementById(`prompt-${itemId}`);
+      const user_prompt = promptEl ? promptEl.value.trim() : '';
+
       fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, optimize }),
+        body: JSON.stringify({ filename, optimize, user_prompt }),
         signal,
       })
         .then(r => r.json().then(d => ({ ok: r.ok, data: d })))

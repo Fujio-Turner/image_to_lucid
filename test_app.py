@@ -611,5 +611,215 @@ class TestProcessImageOptimizeFlag(BaseTestCase):
         self.assertTrue(mock_fn.call_args[0][4])  # defaults to True
 
 
+class TestBuildPrompt(BaseTestCase):
+    def test_build_prompt_no_user_input(self):
+        result = app_module._build_prompt("")
+        self.assertEqual(result, app_module.LUCID_SCHEMA_PROMPT)
+
+    def test_build_prompt_empty_string(self):
+        result = app_module._build_prompt()
+        self.assertEqual(result, app_module.LUCID_SCHEMA_PROMPT)
+
+    def test_build_prompt_with_user_input(self):
+        result = app_module._build_prompt("Add a bottleneck at step 3")
+        self.assertIn(app_module.LUCID_SCHEMA_PROMPT, result)
+        self.assertIn("Additional user instructions:", result)
+        self.assertIn("Add a bottleneck at step 3", result)
+
+    def test_build_prompt_user_input_appended_at_end(self):
+        result = app_module._build_prompt("my instructions")
+        self.assertTrue(result.endswith("my instructions"))
+
+
+class TestValidateReferences(BaseTestCase):
+    def test_valid_references_pass_through(self):
+        shapes = [{"id": "s1"}, {"id": "s2"}]
+        lines = [{"id": "l1",
+                  "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+                  "endpoint2": {"type": "shapeEndpoint", "shapeId": "s2"}}]
+        result_lines, result_groups, result_layers = app_module._validate_references(shapes, lines, [], [])
+        self.assertEqual(len(result_lines), 1)
+
+    def test_invalid_shape_reference_dropped(self):
+        shapes = [{"id": "s1"}]
+        lines = [{"id": "l1",
+                  "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+                  "endpoint2": {"type": "shapeEndpoint", "shapeId": "s_nonexistent"}}]
+        result_lines, _, _ = app_module._validate_references(shapes, lines, [], [])
+        self.assertEqual(len(result_lines), 0)
+
+    def test_invalid_line_reference_dropped(self):
+        shapes = [{"id": "s1"}]
+        lines = [{"id": "l1",
+                  "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+                  "endpoint2": {"type": "lineEndpoint", "lineId": "l_nonexistent", "position": 0.5}}]
+        result_lines, _, _ = app_module._validate_references(shapes, lines, [], [])
+        self.assertEqual(len(result_lines), 0)
+
+    def test_position_endpoint_always_valid(self):
+        shapes = []
+        lines = [{"id": "l1",
+                  "endpoint1": {"type": "positionEndpoint", "position": {"x": 10, "y": 20}},
+                  "endpoint2": {"type": "positionEndpoint", "position": {"x": 100, "y": 200}}}]
+        result_lines, _, _ = app_module._validate_references(shapes, lines, [], [])
+        self.assertEqual(len(result_lines), 1)
+
+    def test_mixed_valid_and_invalid_lines(self):
+        shapes = [{"id": "s1"}, {"id": "s2"}]
+        lines = [
+            {"id": "l1",
+             "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+             "endpoint2": {"type": "shapeEndpoint", "shapeId": "s2"}},
+            {"id": "l2",
+             "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+             "endpoint2": {"type": "shapeEndpoint", "shapeId": "s_bad"}},
+            {"id": "l3",
+             "endpoint1": {"type": "shapeEndpoint", "shapeId": "s2"},
+             "endpoint2": {"type": "shapeEndpoint", "shapeId": "s1"}},
+        ]
+        result_lines, _, _ = app_module._validate_references(shapes, lines, [], [])
+        self.assertEqual(len(result_lines), 2)
+        self.assertEqual([l["id"] for l in result_lines], ["l1", "l3"])
+
+    def test_groups_filtered_to_valid_ids(self):
+        shapes = [{"id": "s1"}, {"id": "s2"}]
+        lines = []
+        groups = [{"id": "g1", "items": ["s1", "s2", "s_bad"]}]
+        _, result_groups, _ = app_module._validate_references(shapes, lines, groups, [])
+        self.assertEqual(len(result_groups), 1)
+        self.assertEqual(result_groups[0]["items"], ["s1", "s2"])
+
+    def test_groups_removed_if_all_items_invalid(self):
+        shapes = [{"id": "s1"}]
+        groups = [{"id": "g1", "items": ["s_bad1", "s_bad2"]}]
+        _, result_groups, _ = app_module._validate_references(shapes, [], groups, [])
+        self.assertEqual(len(result_groups), 0)
+
+    def test_layers_filtered_to_valid_ids(self):
+        shapes = [{"id": "s1"}]
+        layers = [{"id": "lay1", "title": "L1", "items": ["s1", "s_bad"]}]
+        _, _, result_layers = app_module._validate_references(shapes, [], [], layers)
+        self.assertEqual(len(result_layers), 1)
+        self.assertEqual(result_layers[0]["items"], ["s1"])
+
+    def test_dropped_line_removes_from_group(self):
+        shapes = [{"id": "s1"}]
+        lines = [{"id": "l1",
+                  "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+                  "endpoint2": {"type": "shapeEndpoint", "shapeId": "s_bad"}}]
+        groups = [{"id": "g1", "items": ["s1", "l1"]}]
+        result_lines, result_groups, _ = app_module._validate_references(shapes, lines, groups, [])
+        self.assertEqual(len(result_lines), 0)
+        self.assertEqual(result_groups[0]["items"], ["s1"])
+
+    def test_empty_inputs(self):
+        result_lines, result_groups, result_layers = app_module._validate_references([], [], [], [])
+        self.assertEqual(result_lines, [])
+        self.assertEqual(result_groups, [])
+        self.assertEqual(result_layers, [])
+
+
+class TestBuildLucidDocumentGroupsLayers(BaseTestCase):
+    def test_groups_and_layers_passed_through(self):
+        ai_result = {
+            "title": "Test",
+            "shapes": [{"id": "s1", "type": "rectangle"}, {"id": "s2", "type": "circle"}],
+            "lines": [],
+            "groups": [{"id": "g1", "items": ["s1", "s2"]}],
+            "layers": [{"id": "lay1", "title": "Main", "items": ["s1"]}],
+        }
+        doc = app_module._build_lucid_document(ai_result)
+        page = doc["pages"][0]
+        self.assertEqual(len(page["groups"]), 1)
+        self.assertEqual(page["groups"][0]["id"], "g1")
+        self.assertEqual(len(page["layers"]), 1)
+        self.assertEqual(page["layers"][0]["id"], "lay1")
+
+    def test_missing_groups_layers_default_empty(self):
+        ai_result = {"title": "T", "shapes": [], "lines": []}
+        doc = app_module._build_lucid_document(ai_result)
+        page = doc["pages"][0]
+        self.assertEqual(page["groups"], [])
+        self.assertEqual(page["layers"], [])
+
+    def test_invalid_lines_stripped_from_document(self):
+        ai_result = {
+            "title": "T",
+            "shapes": [{"id": "s1", "type": "rectangle"}],
+            "lines": [
+                {"id": "l1",
+                 "endpoint1": {"type": "shapeEndpoint", "shapeId": "s1"},
+                 "endpoint2": {"type": "shapeEndpoint", "shapeId": "s_nonexistent"}},
+            ],
+        }
+        doc = app_module._build_lucid_document(ai_result)
+        self.assertEqual(len(doc["pages"][0]["lines"]), 0)
+
+
+class TestProcessImageUserPrompt(BaseTestCase):
+    def _save_creds(self, provider="gemini", api_key="test-key"):
+        creds = {
+            "selected_ai_provider": provider,
+            "lucid": {"api_key": ""},
+            "gemini": {"api_key": api_key if provider == "gemini" else ""},
+            "openai": {"api_key": api_key if provider == "openai" else ""},
+            "claude": {"api_key": api_key if provider == "claude" else ""},
+            "xai": {"api_key": api_key if provider == "xai" else ""},
+        }
+        self.client.post("/api/credentials", json=creds)
+
+    def test_process_passes_user_prompt(self):
+        self._save_creds("gemini", "test-key")
+        path = os.path.join(_uploads_dir, "prompt_test.png")
+        _create_test_png(path, 200, 100)
+        mock_result = {"title": "T", "shapes": [], "lines": []}
+        mock_fn = MagicMock(return_value=mock_result)
+        with patch.dict(app_module.AI_PROVIDERS, {"gemini": mock_fn}):
+            resp = self.client.post("/api/process", json={
+                "filename": "prompt_test.png",
+                "user_prompt": "Find bottlenecks"
+            })
+        self.assertEqual(resp.status_code, 200)
+        mock_fn.assert_called_once()
+        self.assertEqual(mock_fn.call_args[0][5], "Find bottlenecks")  # 6th arg
+
+    def test_process_empty_user_prompt_default(self):
+        self._save_creds("gemini", "test-key")
+        path = os.path.join(_uploads_dir, "prompt_empty.png")
+        _create_test_png(path, 200, 100)
+        mock_result = {"title": "T", "shapes": [], "lines": []}
+        mock_fn = MagicMock(return_value=mock_result)
+        with patch.dict(app_module.AI_PROVIDERS, {"gemini": mock_fn}):
+            resp = self.client.post("/api/process", json={"filename": "prompt_empty.png"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(mock_fn.call_args[0][5], "")  # defaults to empty string
+
+
+class TestImageMetaTokenBreakdown(BaseTestCase):
+    def test_meta_includes_prompt_tokens(self):
+        path = os.path.join(_uploads_dir, "meta_tok.png")
+        _create_test_png(path, 200, 100)
+        resp = self.client.post("/api/image-meta", json={"filename": "meta_tok.png"})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.get_json()
+        self.assertIn("promptTokens", body)
+        self.assertGreater(body["promptTokens"], 0)
+        # promptTokens should be approx len(LUCID_SCHEMA_PROMPT) // 4
+        expected = len(app_module.LUCID_SCHEMA_PROMPT) // 4
+        self.assertEqual(body["promptTokens"], expected)
+
+    def test_meta_includes_image_tokens(self):
+        path = os.path.join(_uploads_dir, "meta_imgtok.png")
+        _create_test_png(path, 200, 100)
+        resp = self.client.post("/api/image-meta", json={"filename": "meta_imgtok.png"})
+        body = resp.get_json()
+        for section in ("original", "optimized"):
+            self.assertIn("imageTokens", body[section])
+            self.assertIn("tokens", body[section])
+            # total tokens = imageTokens + promptTokens
+            self.assertEqual(body[section]["tokens"],
+                             body[section]["imageTokens"] + body["promptTokens"])
+
+
 if __name__ == "__main__":
     unittest.main()
