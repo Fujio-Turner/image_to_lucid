@@ -1,4 +1,4 @@
-# Lucid v1.1.0
+# Lucid v1.2.0
 
 ![Image to Lucidchart - AI-Powered Diagram Conversion](img/hero.png)
 
@@ -14,6 +14,10 @@ An image-to-Lucidchart pipeline built with **Flask**, **Couchbase Lite CE** (C e
 
 ## Features
 
+- **AI Instructions text box** — Optional freeform text input sent alongside the image to AI, enabling users to ask the AI to add, remove, modify, or analyze parts of the diagram (e.g., "Identify bottlenecks" or "Add a pipeline at step X connecting back to Y")
+- **Full Lucid Standard Import support** — AI prompt covers all shape libraries (Standard, Shape, Flowchart, Container, Table), all 22 endpoint styles, groups, layers, swim lanes, tables, and more
+- **Reference integrity validation** — AI is instructed to self-validate all ID references; server-side safety net drops any lines/groups/layers with invalid references before sending to Lucid
+- **Token estimation breakdown** — Metadata preview shows total estimated tokens with breakdown (image tokens + prompt tokens)
 - **Image optimization** — Automatic downscaling (max 1500px) and JPEG re-encoding before sending to AI, with toggleable Optimize Image control and real-time metadata preview (size, dimensions, est. tokens)
 - **User-controlled pipeline** — Upload → review metadata → Process → AI → Lucid, with Cancel and Delete buttons
 - **Multi-provider AI support** — Gemini (`gemini-2.0-flash`), OpenAI (`gpt-4o`), Claude (`claude-sonnet-4-20250514`), xAI/Grok (`grok-4.20-reasoning`)
@@ -106,8 +110,8 @@ Credentials are stored in the Couchbase Lite embedded database inside the contai
 | `GET` | `/uploads/<filename>` | Serve an uploaded image |
 | `GET` | `/api/images?limit=10&offset=0` | Paginated image history |
 | `DELETE` | `/api/images/<doc_id>` | Delete an image record |
-| `POST` | `/api/image-meta` | Get original/optimized image metadata (size, dimensions, tokens) |
-| `POST` | `/api/process` | Send image to AI provider for analysis (accepts `optimize` flag) |
+| `POST` | `/api/image-meta` | Get original/optimized image metadata (size, dimensions, image tokens, prompt tokens) |
+| `POST` | `/api/process` | Send image to AI provider for analysis (accepts `optimize` flag and optional `user_prompt`) |
 | `POST` | `/api/send-to-lucid` | Create Lucidchart document from AI result |
 | `GET` | `/api/credentials` | Get saved API credentials |
 | `POST` | `/api/credentials` | Save API credentials |
@@ -190,6 +194,7 @@ Append `?debug=true` to the URL to enable the debug console.
 | `ai-error` | Error (red) | AI processing failure |
 | `lucid-request` | Warning (yellow) | Outbound Lucid API request |
 | `lucid-response` | Success (green) | Lucid document created |
+| `validate` | Info (blue) | Reference integrity checks (dropped invalid lines/groups) |
 | `lucid-error` | Error (red) | Lucid API failure |
 
 ---
@@ -197,7 +202,7 @@ Append `?debug=true` to the URL to enable the debug console.
 ## Testing
 
 ```bash
-python -m pytest test_app.py -v
+python -m unittest test_app -v
 ```
 
 ---
