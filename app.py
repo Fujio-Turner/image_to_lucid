@@ -7,6 +7,7 @@ import zipfile
 import logging
 import requests
 from flask import Flask, request, jsonify, send_from_directory
+from PIL import Image
 
 from werkzeug.utils import secure_filename
 
@@ -363,9 +364,39 @@ Rules:
 - Extract ALL text visible in the image."""
 
 
-def _encode_image_b64(filepath):
+IMAGE_OPTIMIZE_MAX_DIMENSION = 1500
+
+
+def _optimize_image(filepath):
+    """Downscale and re-encode image as JPEG. Returns (bytes, True)."""
+    file_size = os.path.getsize(filepath)
+    img = Image.open(filepath)
+    w, h = img.size
+    max_dim = IMAGE_OPTIMIZE_MAX_DIMENSION
+    if max(w, h) > max_dim:
+        scale = max_dim / max(w, h)
+        new_w, new_h = int(w * scale), int(h * scale)
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+        debug_log("optimize", f"Resized {w}x{h} → {new_w}x{new_h}", f"original={file_size} bytes")
+    else:
+        debug_log("optimize", f"Re-encoding at {w}x{h} (within max dimension)", f"original={file_size} bytes")
+
+    if img.mode == "RGBA":
+        img = img.convert("RGB")
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    optimized = buf.getvalue()
+    debug_log("optimize", f"Optimized size: {len(optimized)} bytes", f"reduction={round((1 - len(optimized)/file_size)*100)}%")
+    return optimized, True
+
+
+def _encode_image_b64(filepath, optimize=True):
+    if optimize:
+        img_bytes, was_optimized = _optimize_image(filepath)
+        return base64.b64encode(img_bytes).decode("utf-8"), was_optimized
     with open(filepath, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+        return base64.b64encode(f.read()).decode("utf-8"), False
 
 
 def _get_mime_type(filename):
@@ -373,9 +404,9 @@ def _get_mime_type(filename):
     return {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}.get(ext, "image/png")
 
 
-def _call_gemini(api_key, filepath, filename, timeout):
-    b64 = _encode_image_b64(filepath)
-    mime = _get_mime_type(filename)
+def _call_gemini(api_key, filepath, filename, timeout, optimize=True):
+    b64, was_optimized = _encode_image_b64(filepath, optimize)
+    mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
     resp = requests.post(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
         params={"key": api_key},
@@ -394,9 +425,9 @@ def _call_gemini(api_key, filepath, filename, timeout):
     return json.loads(text)
 
 
-def _call_openai(api_key, filepath, filename, timeout):
-    b64 = _encode_image_b64(filepath)
-    mime = _get_mime_type(filename)
+def _call_openai(api_key, filepath, filename, timeout, optimize=True):
+    b64, was_optimized = _encode_image_b64(filepath, optimize)
+    mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
     resp = requests.post(
         "https://api.openai.com/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -416,9 +447,9 @@ def _call_openai(api_key, filepath, filename, timeout):
     return json.loads(text)
 
 
-def _call_claude(api_key, filepath, filename, timeout):
-    b64 = _encode_image_b64(filepath)
-    mime = _get_mime_type(filename)
+def _call_claude(api_key, filepath, filename, timeout, optimize=True):
+    b64, was_optimized = _encode_image_b64(filepath, optimize)
+    mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
     resp = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
@@ -444,9 +475,9 @@ def _call_claude(api_key, filepath, filename, timeout):
     return json.loads(text)
 
 
-def _call_xai(api_key, filepath, filename, timeout):
-    b64 = _encode_image_b64(filepath)
-    mime = _get_mime_type(filename)
+def _call_xai(api_key, filepath, filename, timeout, optimize=True):
+    b64, was_optimized = _encode_image_b64(filepath, optimize)
+    mime = "image/jpeg" if was_optimized else _get_mime_type(filename)
     resp = requests.post(
         "https://api.x.ai/v1/responses",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -546,6 +577,60 @@ def _create_lucid_zip(document_json):
     return buf
 
 
+@app.route("/api/image-meta", methods=["POST"])
+def image_meta():
+    """Return original and optimized metadata for an uploaded image."""
+    data = request.get_json()
+    filename = data.get("filename")
+    if not filename:
+        return jsonify({"error": "filename is required"}), 400
+
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "File not found"}), 404
+
+    original_size = os.path.getsize(filepath)
+    img = Image.open(filepath)
+    orig_w, orig_h = img.size
+
+    # Estimate token count: ~1 token per 750 bytes of base64
+    original_b64_size = (original_size * 4) // 3
+    original_tokens = original_b64_size // 750
+
+    result = {
+        "original": {
+            "size": original_size,
+            "width": orig_w,
+            "height": orig_h,
+            "tokens": original_tokens,
+        },
+    }
+
+    # Always compute optimized preview so the UI can show the difference
+    opt_img = img.copy()
+    opt_w, opt_h = orig_w, orig_h
+    max_dim = IMAGE_OPTIMIZE_MAX_DIMENSION
+    if max(orig_w, orig_h) > max_dim:
+        scale = max_dim / max(orig_w, orig_h)
+        opt_w, opt_h = int(orig_w * scale), int(orig_h * scale)
+        opt_img = opt_img.resize((opt_w, opt_h), Image.LANCZOS)
+    if opt_img.mode == "RGBA":
+        opt_img = opt_img.convert("RGB")
+    buf = io.BytesIO()
+    opt_img.save(buf, format="JPEG", quality=85)
+    opt_size = buf.tell()
+    opt_b64_size = (opt_size * 4) // 3
+    opt_tokens = opt_b64_size // 750
+    result["optimized"] = {
+        "size": opt_size,
+        "width": opt_w,
+        "height": opt_h,
+        "tokens": opt_tokens,
+    }
+
+    return jsonify(result)
+
+
 @app.route("/api/process", methods=["POST"])
 def process_image():
     """Send an uploaded image to the selected AI provider and return Lucid-ready JSON."""
@@ -567,8 +652,9 @@ def process_image():
     if not api_key:
         return jsonify({"error": f"No API key configured for {provider}"}), 400
 
+    optimize = data.get("optimize", True)
     timeout = BUILD_CONFIG.get("timeouts", {}).get("ai_api", 30)
-    debug_log("ai-request", f"Processing image: {filename}", f"provider={provider}")
+    debug_log("ai-request", f"Processing image: {filename}", f"provider={provider}, optimize={optimize}")
     ai_sent_at = time.time()
     _update_image_record(filename, {
         "status": "ai_processing",
@@ -578,8 +664,8 @@ def process_image():
     })
 
     try:
-        debug_log("ai-request", f"Sending to {provider} API", f"filepath={filepath}, timeout={timeout}")
-        ai_result = AI_PROVIDERS[provider](api_key, filepath, filename, timeout)
+        debug_log("ai-request", f"Sending to {provider} API", f"filepath={filepath}, timeout={timeout}, optimize={optimize}")
+        ai_result = AI_PROVIDERS[provider](api_key, filepath, filename, timeout, optimize)
         debug_log("ai-response", f"AI response received from {provider}", f"shapes={len(ai_result.get('shapes',[]))}, lines={len(ai_result.get('lines',[]))}")
         ai_received_at = time.time()
         _update_image_record(filename, {

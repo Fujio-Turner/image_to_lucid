@@ -459,5 +459,157 @@ class TestHelpers(BaseTestCase):
         self.assertEqual(app_module._get_model_name("unknown"), "unknown")
 
 
+def _create_test_png(path, width=200, height=100, color=(255, 0, 0)):
+    """Create a real PNG file using Pillow for tests that need valid images."""
+    from PIL import Image as PILImage
+    img = PILImage.new("RGB", (width, height), color)
+    img.save(path, format="PNG")
+
+
+class TestOptimizeImage(BaseTestCase):
+    def test_optimize_small_image(self):
+        path = os.path.join(_uploads_dir, "small_opt.png")
+        _create_test_png(path, 200, 100)
+        original_size = os.path.getsize(path)
+        optimized_bytes, was_optimized = app_module._optimize_image(path)
+        self.assertTrue(was_optimized)
+        self.assertIsInstance(optimized_bytes, bytes)
+        self.assertGreater(len(optimized_bytes), 0)
+
+    def test_optimize_large_image_downscales(self):
+        path = os.path.join(_uploads_dir, "large_opt.png")
+        _create_test_png(path, 3000, 2000)
+        optimized_bytes, was_optimized = app_module._optimize_image(path)
+        self.assertTrue(was_optimized)
+        from PIL import Image as PILImage
+        opt_img = PILImage.open(io.BytesIO(optimized_bytes))
+        self.assertLessEqual(max(opt_img.size), app_module.IMAGE_OPTIMIZE_MAX_DIMENSION)
+
+    def test_optimize_rgba_converts_to_rgb(self):
+        from PIL import Image as PILImage
+        path = os.path.join(_uploads_dir, "rgba_opt.png")
+        img = PILImage.new("RGBA", (200, 100), (255, 0, 0, 128))
+        img.save(path, format="PNG")
+        optimized_bytes, was_optimized = app_module._optimize_image(path)
+        self.assertTrue(was_optimized)
+        opt_img = PILImage.open(io.BytesIO(optimized_bytes))
+        self.assertEqual(opt_img.mode, "RGB")
+
+    def test_optimize_within_max_dimension_no_resize(self):
+        path = os.path.join(_uploads_dir, "norz_opt.png")
+        _create_test_png(path, 800, 600)
+        optimized_bytes, _ = app_module._optimize_image(path)
+        from PIL import Image as PILImage
+        opt_img = PILImage.open(io.BytesIO(optimized_bytes))
+        self.assertEqual(opt_img.size, (800, 600))
+
+
+class TestEncodeImageB64(BaseTestCase):
+    def test_encode_with_optimize(self):
+        path = os.path.join(_uploads_dir, "enc_opt.png")
+        _create_test_png(path, 200, 100)
+        b64, was_optimized = app_module._encode_image_b64(path, optimize=True)
+        self.assertTrue(was_optimized)
+        import base64
+        decoded = base64.b64decode(b64)
+        self.assertGreater(len(decoded), 0)
+
+    def test_encode_without_optimize(self):
+        path = os.path.join(_uploads_dir, "enc_noopt.png")
+        _create_test_png(path, 200, 100)
+        b64, was_optimized = app_module._encode_image_b64(path, optimize=False)
+        self.assertFalse(was_optimized)
+        import base64
+        decoded = base64.b64decode(b64)
+        with open(path, "rb") as f:
+            self.assertEqual(decoded, f.read())
+
+
+class TestImageMeta(BaseTestCase):
+    def test_image_meta_no_filename(self):
+        resp = self.client.post("/api/image-meta", json={})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_image_meta_file_not_found(self):
+        resp = self.client.post("/api/image-meta", json={"filename": "nope.png"})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_image_meta_returns_original_and_optimized(self):
+        path = os.path.join(_uploads_dir, "meta_test.png")
+        _create_test_png(path, 3000, 2000)
+        resp = self.client.post("/api/image-meta", json={"filename": "meta_test.png"})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.get_json()
+        self.assertIn("original", body)
+        self.assertIn("optimized", body)
+        orig = body["original"]
+        opt = body["optimized"]
+        self.assertEqual(orig["width"], 3000)
+        self.assertEqual(orig["height"], 2000)
+        self.assertLessEqual(opt["width"], app_module.IMAGE_OPTIMIZE_MAX_DIMENSION)
+        self.assertLessEqual(opt["height"], app_module.IMAGE_OPTIMIZE_MAX_DIMENSION)
+        for key in ("size", "width", "height", "tokens"):
+            self.assertIn(key, orig)
+            self.assertIn(key, opt)
+
+    def test_image_meta_small_image_still_has_optimized(self):
+        path = os.path.join(_uploads_dir, "meta_small.png")
+        _create_test_png(path, 200, 100)
+        resp = self.client.post("/api/image-meta", json={"filename": "meta_small.png"})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.get_json()
+        self.assertIn("optimized", body)
+        self.assertEqual(body["optimized"]["width"], 200)
+        self.assertEqual(body["optimized"]["height"], 100)
+
+
+class TestProcessImageOptimizeFlag(BaseTestCase):
+    def _save_creds(self, provider="gemini", api_key="test-key"):
+        creds = {
+            "selected_ai_provider": provider,
+            "lucid": {"api_key": ""},
+            "gemini": {"api_key": api_key if provider == "gemini" else ""},
+            "openai": {"api_key": api_key if provider == "openai" else ""},
+            "claude": {"api_key": api_key if provider == "claude" else ""},
+            "xai": {"api_key": api_key if provider == "xai" else ""},
+        }
+        self.client.post("/api/credentials", json=creds)
+
+    def test_process_passes_optimize_true(self):
+        self._save_creds("gemini", "test-key")
+        path = os.path.join(_uploads_dir, "opt_flag.png")
+        _create_test_png(path, 200, 100)
+        mock_result = {"title": "T", "shapes": [], "lines": []}
+        mock_fn = MagicMock(return_value=mock_result)
+        with patch.dict(app_module.AI_PROVIDERS, {"gemini": mock_fn}):
+            resp = self.client.post("/api/process", json={"filename": "opt_flag.png", "optimize": True})
+        self.assertEqual(resp.status_code, 200)
+        mock_fn.assert_called_once()
+        self.assertTrue(mock_fn.call_args[0][4])  # 5th arg = optimize=True
+
+    def test_process_passes_optimize_false(self):
+        self._save_creds("gemini", "test-key")
+        path = os.path.join(_uploads_dir, "opt_flag2.png")
+        _create_test_png(path, 200, 100)
+        mock_result = {"title": "T", "shapes": [], "lines": []}
+        mock_fn = MagicMock(return_value=mock_result)
+        with patch.dict(app_module.AI_PROVIDERS, {"gemini": mock_fn}):
+            resp = self.client.post("/api/process", json={"filename": "opt_flag2.png", "optimize": False})
+        self.assertEqual(resp.status_code, 200)
+        mock_fn.assert_called_once()
+        self.assertFalse(mock_fn.call_args[0][4])  # 5th arg = optimize=False
+
+    def test_process_defaults_optimize_true(self):
+        self._save_creds("gemini", "test-key")
+        path = os.path.join(_uploads_dir, "opt_default.png")
+        _create_test_png(path, 200, 100)
+        mock_result = {"title": "T", "shapes": [], "lines": []}
+        mock_fn = MagicMock(return_value=mock_result)
+        with patch.dict(app_module.AI_PROVIDERS, {"gemini": mock_fn}):
+            resp = self.client.post("/api/process", json={"filename": "opt_default.png"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(mock_fn.call_args[0][4])  # defaults to True
+
+
 if __name__ == "__main__":
     unittest.main()
