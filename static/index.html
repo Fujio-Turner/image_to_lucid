@@ -12,7 +12,7 @@
   <!-- Navbar -->
   <div class="navbar bg-base-100 shadow-sm">
     <div class="flex-1">
-      <a class="btn btn-ghost text-xl text-primary">Lucid <span class="text-xs font-normal text-base-content/50 ml-1">v1.0.0</span></a>
+      <a class="btn btn-ghost text-xl text-primary">Lucid <span class="text-xs font-normal text-base-content/50 ml-1">v1.1.0</span></a>
     </div>
     <div class="flex-none flex items-center gap-2">
       <!-- Status Indicators -->
@@ -90,7 +90,13 @@
         <!-- DaisyUI File Input -->
         <fieldset class="fieldset w-full max-w-md mt-4">
           <legend class="fieldset-legend">Pick a file</legend>
-          <input type="file" class="file-input file-input-primary w-full" id="fileInput" accept=".png,.jpg,.jpeg" />
+          <div class="flex items-center gap-3">
+            <input type="file" class="file-input file-input-primary flex-1" id="fileInput" accept=".png,.jpg,.jpeg" />
+            <div class="flex items-center gap-2">
+              <input type="checkbox" class="toggle toggle-primary" id="optimizeToggle" checked />
+              <label for="optimizeToggle" class="label-text text-sm whitespace-nowrap cursor-pointer">Optimize Image</label>
+            </div>
+          </div>
           <label class="label">PNG, JPG, or JPEG only</label>
         </fieldset>
       </div>
@@ -104,17 +110,17 @@
       <div class="card-body">
         <h2 class="card-title text-sm">Recent Images</h2>
         <div class="overflow-x-auto">
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>Preview</th>
-                <th>Filename</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>AI</th>
-                <th></th>
-              </tr>
-            </thead>
+          <table class="table table-sm table-fixed w-full">
+           <thead>
+             <tr>
+               <th class="w-14">Preview</th>
+               <th class="w-28">Filename</th>
+               <th class="w-32">Date</th>
+               <th class="w-20">Status</th>
+               <th>AI</th>
+               <th class="w-10"></th>
+             </tr>
+           </thead>
             <tbody id="imageHistoryBody">
               <tr><td colspan="6" class="text-center text-base-content/40">No images yet</td></tr>
             </tbody>
@@ -287,7 +293,7 @@
   <div id="debugConsole" class="fixed bottom-0 left-0 right-0 bg-base-300 border-t-2 border-primary shadow-2xl transition-transform duration-300 translate-y-full z-50 hidden" style="height: 320px;">
     <div class="flex items-center justify-between px-4 py-2 bg-base-100 border-b border-base-content/10">
       <div class="flex items-center gap-2">
-        <span class="font-mono text-sm font-bold text-primary">🐛 Debug Console</span>
+        <span class="font-mono text-sm font-bold text-primary">Debug Console</span>
         <span class="badge badge-sm badge-ghost font-mono" id="debugEntryCount">0 entries</span>
       </div>
       <div class="flex items-center gap-2">
@@ -356,6 +362,32 @@
       fileInput.value = '';
     });
 
+    function formatSize(bytes) {
+      if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+
+    function formatTokens(n) {
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+      return n.toString();
+    }
+
+    function renderMetaContent(meta, optimize) {
+      const src = optimize ? meta.optimized : meta.original;
+      const changed = meta.original.size !== meta.optimized.size;
+      let html = `<span class="badge badge-sm ${optimize ? 'badge-primary' : 'badge-ghost'}">${optimize ? 'Optimized' : 'Original'}</span>`;
+      html += `<span><b>Size:</b> ${formatSize(src.size)}`;
+      if (optimize && changed) html += ` <span class="text-success">(was ${formatSize(meta.original.size)})</span>`;
+      html += `</span>`;
+      html += `<span><b>Dimensions:</b> ${src.width}\u00d7${src.height}`;
+      if (optimize && changed) html += ` <span class="text-success">(was ${meta.original.width}\u00d7${meta.original.height})</span>`;
+      html += `</span>`;
+      html += `<span><b>Est. tokens:</b> ~${formatTokens(src.tokens)}`;
+      if (optimize && changed) html += ` <span class="text-success">(was ~${formatTokens(meta.original.tokens)})</span>`;
+      html += `</span>`;
+      return html;
+    }
+
     function uploadFile(file) {
       const id = Date.now();
       const thumb = URL.createObjectURL(file);
@@ -384,16 +416,43 @@
           const statusEl = document.querySelector(`#item-${id} .upload-status`);
           if (ok) {
             statusEl.innerHTML = `<span class="badge badge-success badge-sm">Uploaded</span>
-              <button class="btn btn-primary btn-xs ml-2 send-to-ai-btn" data-filename="${data.filename}" data-item-id="${id}">Send to AI</button>`;
+              <span class="loading loading-spinner loading-xs ml-2"></span> Loading metadata…`;
             setStep(2);
             showToast('File uploaded successfully', 'alert-success');
             loadImages();
-            // Wire up Send to AI button
-            document.querySelector(`#item-${id} .send-to-ai-btn`).addEventListener('click', (e) => {
-              sendToAI(e.target.dataset.filename, id);
-            });
-            // Auto-send to AI
-            sendToAI(data.filename, id);
+            // Fetch metadata
+            fetch('/api/image-meta', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: data.filename })
+            })
+              .then(r => r.json())
+              .then(meta => {
+                const optimize = document.getElementById('optimizeToggle').checked;
+                const cardBody = document.querySelector(`#item-${id} .card-body`);
+                statusEl.innerHTML = `<span class="badge badge-success badge-sm">Uploaded</span>`;
+                cardBody.insertAdjacentHTML('beforeend',
+                  `<div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/70 mt-1" id="meta-${id}">${renderMetaContent(meta, optimize)}</div>`);
+                cardBody.insertAdjacentHTML('beforeend', `
+                  <div class="mt-2 process-cancel-wrap flex gap-2">
+                    <button class="btn btn-primary btn-wide process-btn" data-filename="${data.filename}" data-item-id="${id}">Process Image</button>
+                    <button class="btn btn-outline btn-error delete-upload-btn" data-item-id="${id}" data-filename="${data.filename}">Delete</button>
+                  </div>`);
+                // Store meta on the card element for toggle updates
+                document.getElementById(`item-${id}`).dataset.meta = JSON.stringify(meta);
+                document.getElementById(`item-${id}`).dataset.filename = data.filename;
+                wireUpCardButtons(id, data.filename);
+              })
+              .catch(() => {
+                const cardBody = document.querySelector(`#item-${id} .card-body`);
+                cardBody.insertAdjacentHTML('beforeend', `
+                  <div class="mt-2 process-cancel-wrap flex gap-2">
+                    <button class="btn btn-primary btn-wide process-btn" data-filename="${data.filename}" data-item-id="${id}">Process Image</button>
+                    <button class="btn btn-outline btn-error delete-upload-btn" data-item-id="${id}" data-filename="${data.filename}">Delete</button>
+                  </div>`);
+                document.getElementById(`item-${id}`).dataset.filename = data.filename;
+                wireUpCardButtons(id, data.filename);
+              });
           } else {
             statusEl.innerHTML = `<span class="badge badge-error badge-sm">${data.error || 'Failed'}</span>`;
             showToast(data.error || 'Upload failed', 'alert-error');
@@ -406,19 +465,94 @@
         });
     }
 
+    function wireUpCardButtons(itemId, filename) {
+      const card = document.getElementById(`item-${itemId}`);
+      if (!card) return;
+      const processBtn = card.querySelector('.process-btn');
+      if (processBtn) {
+        processBtn.addEventListener('click', () => {
+          sendToAI(filename, itemId);
+        });
+      }
+      const deleteBtn = card.querySelector('.delete-upload-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+          deleteUploadCard(itemId, filename);
+        });
+      }
+    }
+
+    function deleteUploadCard(itemId, filename) {
+      // Find the image record ID from the history to delete server-side
+      fetch(`/api/images`).then(r => r.json()).then(data => {
+        const rec = data.images.find(img => img.filename === filename);
+        if (rec) {
+          fetch(`/api/images/${rec.id}`, { method: 'DELETE' }).then(() => loadImages());
+        }
+      });
+      // Remove the upload card from the UI
+      const card = document.getElementById(`item-${itemId}`);
+      if (card) card.remove();
+      showToast('Image deleted', 'alert-info');
+    }
+
+    // Update metadata display when Optimize toggle changes
+    document.getElementById('optimizeToggle').addEventListener('change', () => {
+      const optimize = document.getElementById('optimizeToggle').checked;
+      document.querySelectorAll('#uploadList [data-meta]').forEach(card => {
+        const meta = JSON.parse(card.dataset.meta);
+        const itemId = card.id.replace('item-', '');
+        const metaEl = document.getElementById('meta-' + itemId);
+        if (metaEl) metaEl.innerHTML = renderMetaContent(meta, optimize);
+      });
+    });
+
     // --- Send to AI ---
     let lastLucidDoc = null;
     let lastAiFilename = null;
     let lastAiTitle = null;
     let lastAiItemId = null;
-    function sendToAI(filename, itemId) {
+    let activeAbort = null;  // current AbortController
+
+    function cancelProcessing(itemId) {
+      if (activeAbort) {
+        activeAbort.abort();
+        activeAbort = null;
+      }
+      const statusEl = document.querySelector(`#item-${itemId} .upload-status`);
+      statusEl.innerHTML = `<span class="badge badge-warning badge-sm">Cancelled</span>`;
+      restoreProcessButton(itemId);
+      setStep(2);
+      showToast('Processing cancelled', 'alert-warning');
+    }
+
+    function showCancelButton(itemId) {
+      const card = document.getElementById(`item-${itemId}`);
+      const wrap = card.querySelector('.process-cancel-wrap');
+      if (wrap) {
+        wrap.innerHTML = `<button class="btn btn-error btn-wide cancel-btn" data-item-id="${itemId}">Cancel</button>`;
+        wrap.querySelector('.cancel-btn').addEventListener('click', (e) => {
+          cancelProcessing(parseInt(e.target.dataset.itemId));
+        });
+      }
+    }
+
+    function sendToAI(filename, itemId, optimize) {
+      if (optimize === undefined) optimize = document.getElementById('optimizeToggle').checked;
       const statusEl = document.querySelector(`#item-${itemId} .upload-status`);
       statusEl.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Sending to AI…';
       setStep(2);
+
+      // Set up abort controller
+      activeAbort = new AbortController();
+      const signal = activeAbort.signal;
+      showCancelButton(itemId);
+
       fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename })
+        body: JSON.stringify({ filename, optimize }),
+        signal,
       })
         .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
         .then(({ ok, data }) => {
@@ -432,25 +566,37 @@
             const shapeCount = data.ai_result?.shapes?.length || 0;
             const lineCount = data.ai_result?.lines?.length || 0;
             statusEl.innerHTML = `<span class="badge badge-success badge-sm">AI Done</span>
-              <span class="text-xs ml-1">${data.provider} · ${shapeCount} shapes, ${lineCount} lines</span>
-              <button class="btn btn-secondary btn-xs ml-2 send-to-lucid-btn" data-title="${data.ai_result?.title || 'AI Diagram'}">Send to Lucid</button>`;
+              <span class="text-xs ml-1">${data.provider} · ${shapeCount} shapes, ${lineCount} lines</span>`;
             setStep(3);
             showToast(`AI processed: ${shapeCount} shapes, ${lineCount} lines`, 'alert-success');
-            document.querySelector(`#item-${itemId} .send-to-lucid-btn`).addEventListener('click', (e) => {
-              sendToLucid(e.target.dataset.title, itemId);
-            });
             // Auto-send to Lucid
             sendToLucid(data.ai_result?.title || 'AI Diagram', itemId);
           } else {
             statusEl.innerHTML = `<span class="badge badge-error badge-sm">AI Error</span>
               <span class="text-xs ml-1">${data.error}</span>`;
             showToast(data.error || 'AI processing failed', 'alert-error');
+            restoreProcessButton(itemId);
           }
         })
-        .catch(() => {
+        .catch(err => {
+          if (err.name === 'AbortError') return;
           statusEl.innerHTML = '<span class="badge badge-error badge-sm">Network error</span>';
           showToast('Network error', 'alert-error');
+          restoreProcessButton(itemId);
         });
+    }
+
+    function restoreProcessButton(itemId) {
+      const card = document.getElementById(`item-${itemId}`);
+      if (!card) return;
+      const wrap = card.querySelector('.process-cancel-wrap');
+      const filename = card.dataset.filename;
+      if (wrap && filename) {
+        wrap.innerHTML = `
+          <button class="btn btn-primary btn-wide process-btn" data-filename="${filename}" data-item-id="${itemId}">Process Image</button>
+          <button class="btn btn-outline btn-error delete-upload-btn" data-item-id="${itemId}" data-filename="${filename}">Delete</button>`;
+        wireUpCardButtons(itemId, filename);
+      }
     }
 
     // --- Send to Lucid ---
@@ -459,32 +605,46 @@
       const statusEl = document.querySelector(`#item-${itemId} .upload-status`);
       statusEl.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Sending to Lucid…';
       setStep(3);
+
+      // Set up abort controller for Lucid leg
+      activeAbort = new AbortController();
+      const signal = activeAbort.signal;
+      showCancelButton(itemId);
+
       fetch('/api/send-to-lucid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lucid_document: lastLucidDoc, title, filename })
+        body: JSON.stringify({ lucid_document: lastLucidDoc, title, filename }),
+        signal,
       })
         .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
         .then(({ ok, data }) => {
+          activeAbort = null;
           if (ok) {
-            const docId = data.lucid_response?.documentId || '';
             const editUrl = data.lucid_response?.editUrl || '';
             let link = '<span class="badge badge-success badge-sm">Sent to Lucid</span>';
             if (editUrl) {
               link += ` <a href="${editUrl}" target="_blank" class="link link-primary text-xs ml-1">Open in Lucidchart →</a>`;
             }
             statusEl.innerHTML = link;
+            // Hide cancel button on success
+            const card = document.getElementById(`item-${itemId}`);
+            const wrap = card?.querySelector('.process-cancel-wrap');
+            if (wrap) wrap.innerHTML = '';
             setStep(4);
             showToast('Document created in Lucid!', 'alert-success');
           } else {
             statusEl.innerHTML = `<span class="badge badge-error badge-sm">Lucid Error</span>
               <span class="text-xs ml-1">${data.error}</span>`;
             showToast(data.error || 'Lucid import failed', 'alert-error');
+            restoreProcessButton(itemId);
           }
         })
-        .catch(() => {
+        .catch(err => {
+          if (err.name === 'AbortError') return;
           statusEl.innerHTML = '<span class="badge badge-error badge-sm">Network error</span>';
           showToast('Network error', 'alert-error');
+          restoreProcessButton(itemId);
         });
     }
 
@@ -617,7 +777,7 @@
             : '—';
           return `<tr>
             <td><img src="/uploads/${img.filename}" class="w-10 h-10 object-cover rounded" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'"/></td>
-            <td class="text-sm">${img.filename}</td>
+            <td class="text-sm truncate max-w-[7rem]" title="${img.filename}">${img.filename}</td>
             <td class="text-xs text-base-content/60">${dateStr}</td>
             <td><span class="badge badge-sm ${statusBadge}">${statusLabel}</span></td>
             <td class="text-xs text-base-content/60">${aiInfo}</td>
