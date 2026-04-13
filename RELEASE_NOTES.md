@@ -1,5 +1,30 @@
 # Release Notes
 
+## v1.2.1 — Image Detail Overlay, Bug Fixes & Stability
+
+### New Features
+
+- **Image detail overlay** — Click any row in the Recent Images table to open a full-page modal with:
+  - Zoomable image preview (click to toggle between thumbnail and full-size)
+  - Uploaded filename vs saved filename (before/after `secure_filename` sanitization)
+  - AI processing stats (provider, model, duration, shape/line counts)
+  - User prompt (if provided)
+  - Lucid import link and duration
+  - Full timing breakdown (AI sent/received, Lucid sent/received)
+  - Error details (source and message)
+- **Favicon** — Added project favicon (image → flowchart icon on purple background) to both `index.html` and `help.html`
+- **Auto-clear completed uploads** — Upload cards automatically fade out and remove themselves 3 seconds after successful Lucid import, keeping the work queue clean
+- **Row hover highlight** — Recent Images table rows highlight with a primary color tint on hover to indicate they are clickable
+
+### Bug Fixes
+
+- **User prompt not persisted** — `user_prompt` and `optimize` fields were not initialized at document creation time in Couchbase Lite, causing them to be silently lost. Now initialized in `_save_image_record()` and written during `_update_image_record()` in `process_image()`
+- **Original filename not captured** — The original uploaded filename (before `secure_filename()` sanitization) was discarded. Now stored as `original_filename` at upload time
+- **Lines with missing endpoints crash Lucid import** — AI-generated lines with empty or missing `endpoint1`/`endpoint2` passed validation and caused Lucid API to return 400 (`"Line line_13 has no endpoint positions specified"`). `_validate_references()` now rejects lines with missing endpoints, requires `positionEndpoint` to have `x`/`y` coordinates, and rejects unknown endpoint types
+- **Lucid status check false positives** — Health check used `GET /documents` (non-existent endpoint, returned 404) and treated it as "ok". Changed to `GET /users` (valid endpoint) and now accepts 403 (key valid, lacks user-list scope) while rejecting 401 (invalid key) and 5xx (server errors)
+
+---
+
 ## v1.2.0 — AI Instructions & Full Lucid Standard Import Support
 
 ### New Features
