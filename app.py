@@ -131,17 +131,18 @@ def upload():
         return jsonify({"error": "No selected file"}), 400
     debug_log("upload", f"Upload request received: {file.filename if file else 'no file'}")
     if file and allowed_file(file.filename):
+        original_filename = file.filename
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(filepath)
         debug_log("upload", f"File saved to disk: {filename}", filepath)
-        _save_image_record(filename)
+        _save_image_record(filename, original_filename)
         return jsonify({"message": "File uploaded", "filename": filename}), 200
     debug_log("upload", "Upload error", "File type not allowed. Use png, jpeg, or jpg.")
     return jsonify({"error": "File type not allowed. Use png, jpeg, or jpg."}), 400
 
 
-def _save_image_record(filename):
+def _save_image_record(filename, original_filename=""):
     ts = time.time()
     doc_id = f"img_{int(ts * 1000)}"
     debug_log("cbl-save", f"Saving image record: {filename}", f"doc_id={doc_id}, USE_CBL={USE_CBL}")
@@ -150,8 +151,11 @@ def _save_image_record(filename):
         doc = MutableDocument(doc_id)
         doc["type"] = "image"
         doc["filename"] = filename
+        doc["original_filename"] = original_filename or filename
         doc["timestamp"] = ts
         doc["status"] = "uploaded"
+        doc["user_prompt"] = ""
+        doc["optimize"] = True
         db.saveDocument(doc)
         # Update manifest with new ID
         ids = []
@@ -172,7 +176,7 @@ def _save_image_record(filename):
         if os.path.exists(history_file):
             with open(history_file) as f:
                 records = json.load(f)
-        records.append({"id": doc_id, "filename": filename, "timestamp": ts, "status": "uploaded"})
+        records.append({"id": doc_id, "filename": filename, "original_filename": original_filename or filename, "timestamp": ts, "status": "uploaded", "user_prompt": "", "optimize": True})
         with open(history_file, "w") as f:
             json.dump(records, f)
         debug_log("cbl-save", f"Image record saved to JSON file", f"doc_id={doc_id}")
@@ -235,6 +239,7 @@ def get_images():
                 images.append({
                     "id": img_id,
                     "filename": props.get("filename", ""),
+                    "original_filename": props.get("original_filename", props.get("filename", "")),
                     "timestamp": props.get("timestamp", 0),
                     "status": props.get("status", ""),
                     "ai_provider": props.get("ai_provider", ""),
@@ -249,6 +254,9 @@ def get_images():
                     "lucid_duration_s": props.get("lucid_duration_s", 0),
                     "error_source": props.get("error_source", ""),
                     "error_detail": props.get("error_detail", ""),
+                    "user_prompt": props.get("user_prompt", ""),
+                    "optimize": props.get("optimize", True),
+                    "lucid_response": props.get("lucid_response", ""),
                 })
         return jsonify({"images": images, "total": total})
     else:
@@ -611,8 +619,11 @@ def _normalize_color(value):
 
 
 def _sanitize_shapes(shapes):
-    """Sanitize color values in shapes so Lucid accepts them."""
+    """Sanitize color values and bounding boxes in shapes so Lucid accepts them."""
     for shape in shapes:
+        bb = shape.get("boundingBox", {})
+        if "rotation" in bb:
+            bb["rotation"] = max(0, min(360, bb["rotation"]))
         style = shape.get("style", {})
         fill = style.get("fill", {})
         if "color" in fill:
@@ -630,24 +641,28 @@ def _validate_references(shapes, lines, groups, layers):
     all_ids = shape_ids | line_ids
 
     def _endpoint_valid(ep):
-        ep_type = ep.get("type", "")
+        if not ep or not ep.get("type"):
+            return False
+        ep_type = ep["type"]
         if ep_type == "shapeEndpoint":
             return ep.get("shapeId") in shape_ids
         if ep_type == "lineEndpoint":
             return ep.get("lineId") in line_ids
         if ep_type == "positionEndpoint":
-            return True
-        return True
+            return "x" in ep and "y" in ep
+        return False
 
     valid_lines = []
     for line in lines:
-        ep1 = line.get("endpoint1", {})
-        ep2 = line.get("endpoint2", {})
-        if _endpoint_valid(ep1) and _endpoint_valid(ep2):
+        ep1 = line.get("endpoint1")
+        ep2 = line.get("endpoint2")
+        if ep1 and ep2 and _endpoint_valid(ep1) and _endpoint_valid(ep2):
             valid_lines.append(line)
         else:
-            debug_log("validate", f"Dropped line with invalid reference: {line.get('id','?')}",
-                      f"ep1={ep1.get('shapeId', ep1.get('lineId',''))}, ep2={ep2.get('shapeId', ep2.get('lineId',''))}")
+            ep1_info = ep1.get('shapeId', ep1.get('lineId', ep1.get('type', ''))) if ep1 else 'missing'
+            ep2_info = ep2.get('shapeId', ep2.get('lineId', ep2.get('type', ''))) if ep2 else 'missing'
+            debug_log("validate", f"Dropped line with invalid/missing endpoints: {line.get('id','?')}",
+                      f"ep1={ep1_info}, ep2={ep2_info}")
 
     # Recalculate valid IDs after dropping bad lines
     valid_line_ids = {l["id"] for l in valid_lines if "id" in l}
@@ -797,6 +812,8 @@ def process_image():
         "ai_provider": provider,
         "ai_model": _get_model_name(provider),
         "ai_sent_at": ai_sent_at,
+        "user_prompt": user_prompt,
+        "optimize": optimize,
     })
 
     try:
@@ -983,12 +1000,11 @@ def get_status():
     if lucid_key:
         try:
             r = requests.get(
-                "https://api.lucid.co/documents",
+                "https://api.lucid.co/users",
                 headers={"Authorization": f"Bearer {lucid_key}", "Lucid-Api-Version": "1"},
-                params={"limit": 1},
                 timeout=min(lucid_timeout, 5),
             )
-            lucid_ok = r.status_code not in (401, 403)
+            lucid_ok = r.status_code not in (401, 500, 502, 503)
         except Exception:
             pass
 
