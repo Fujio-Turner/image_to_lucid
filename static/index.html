@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lucid</title>
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
@@ -282,6 +283,85 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
           Settings Guide
         </a>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+
+  <!-- Image Detail Overlay -->
+  <dialog id="imageDetailModal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl max-h-[90vh] overflow-y-auto">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <h3 class="text-lg font-bold text-primary mb-4">Image Details</h3>
+
+      <!-- Image preview (click to enlarge) -->
+      <div class="flex justify-center mb-4">
+        <img id="detailImage" src="" alt="" class="max-h-64 rounded-lg cursor-zoom-in shadow-md transition-all" onclick="this.classList.toggle('max-h-64'); this.classList.toggle('max-h-[80vh]');" />
+      </div>
+
+      <!-- File info -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="bg-base-200 rounded-lg p-4">
+          <h4 class="font-semibold text-sm mb-2">File Info</h4>
+          <div class="flex flex-col gap-1 text-sm">
+            <div><span class="text-base-content/50">Uploaded Name:</span> <span id="detailOriginalFilename" class="font-mono"></span></div>
+            <div><span class="text-base-content/50">Saved As:</span> <span id="detailFilename" class="font-mono"></span></div>
+            <div><span class="text-base-content/50">Doc ID:</span> <span id="detailDocId" class="font-mono text-xs"></span></div>
+            <div><span class="text-base-content/50">Uploaded:</span> <span id="detailUploadDate"></span></div>
+            <div><span class="text-base-content/50">Status:</span> <span id="detailStatus"></span></div>
+            <div><span class="text-base-content/50">Optimized:</span> <span id="detailOptimize"></span></div>
+          </div>
+        </div>
+
+        <div class="bg-base-200 rounded-lg p-4">
+          <h4 class="font-semibold text-sm mb-2">AI Processing</h4>
+          <div class="flex flex-col gap-1 text-sm">
+            <div><span class="text-base-content/50">Provider:</span> <span id="detailAiProvider"></span></div>
+            <div><span class="text-base-content/50">Model:</span> <span id="detailAiModel"></span></div>
+            <div><span class="text-base-content/50">Duration:</span> <span id="detailAiDuration"></span></div>
+            <div><span class="text-base-content/50">Shapes:</span> <span id="detailAiShapes"></span></div>
+            <div><span class="text-base-content/50">Lines:</span> <span id="detailAiLines"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User prompt -->
+      <div class="bg-base-200 rounded-lg p-4 mb-4" id="detailPromptSection">
+        <h4 class="font-semibold text-sm mb-2">User Prompt</h4>
+        <p id="detailUserPrompt" class="text-sm whitespace-pre-wrap font-mono bg-base-300 rounded p-3"></p>
+      </div>
+
+      <!-- Lucid info -->
+      <div class="bg-base-200 rounded-lg p-4 mb-4" id="detailLucidSection">
+        <h4 class="font-semibold text-sm mb-2">Lucid Import</h4>
+        <div class="flex flex-col gap-1 text-sm">
+          <div><span class="text-base-content/50">Duration:</span> <span id="detailLucidDuration"></span></div>
+          <div id="detailLucidLinkWrap"><span class="text-base-content/50">Document:</span> <span id="detailLucidLink"></span></div>
+        </div>
+      </div>
+
+      <!-- Timing -->
+      <div class="bg-base-200 rounded-lg p-4 mb-4">
+        <h4 class="font-semibold text-sm mb-2">Timing</h4>
+        <div class="flex flex-col gap-1 text-xs font-mono">
+          <div><span class="text-base-content/50">AI Sent:</span> <span id="detailAiSentAt"></span></div>
+          <div><span class="text-base-content/50">AI Received:</span> <span id="detailAiReceivedAt"></span></div>
+          <div><span class="text-base-content/50">Lucid Sent:</span> <span id="detailLucidSentAt"></span></div>
+          <div><span class="text-base-content/50">Lucid Received:</span> <span id="detailLucidReceivedAt"></span></div>
+        </div>
+      </div>
+
+      <!-- Error info -->
+      <div class="bg-error/10 rounded-lg p-4 mb-4 hidden" id="detailErrorSection">
+        <h4 class="font-semibold text-sm mb-2 text-error">Error</h4>
+        <div class="flex flex-col gap-1 text-sm">
+          <div><span class="text-base-content/50">Source:</span> <span id="detailErrorSource" class="text-error font-semibold"></span></div>
+          <div><span class="text-base-content/50">Detail:</span> <span id="detailErrorDetail" class="text-error"></span></div>
+        </div>
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -637,12 +717,20 @@
               link += ` <a href="${editUrl}" target="_blank" class="link link-primary text-xs ml-1">Open in Lucidchart →</a>`;
             }
             statusEl.innerHTML = link;
-            // Hide cancel button on success
-            const card = document.getElementById(`item-${itemId}`);
-            const wrap = card?.querySelector('.process-cancel-wrap');
-            if (wrap) wrap.innerHTML = '';
             setStep(4);
             showToast('Document created in Lucid!', 'alert-success');
+            loadImages();
+            // Auto-remove the upload card after a short delay
+            const card = document.getElementById(`item-${itemId}`);
+            if (card) {
+              setTimeout(() => {
+                card.style.transition = 'opacity 0.5s, max-height 0.5s';
+                card.style.opacity = '0';
+                card.style.maxHeight = '0';
+                card.style.overflow = 'hidden';
+                setTimeout(() => card.remove(), 500);
+              }, 3000);
+            }
           } else {
             statusEl.innerHTML = `<span class="badge badge-error badge-sm">Lucid Error</span>
               <span class="text-xs ml-1">${data.error}</span>`;
@@ -768,7 +856,9 @@
           tbody.innerHTML = '<tr><td colspan="6" class="text-center text-base-content/40">No images yet</td></tr>';
           return;
         }
+        const imageDataMap = {};
         tbody.innerHTML = data.images.map(img => {
+          imageDataMap[img.id] = img;
           const d = new Date(img.timestamp * 1000);
           const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
           const statusBadge = {
@@ -785,7 +875,7 @@
           const aiInfo = img.ai_provider
             ? `${img.ai_provider}/${img.ai_model || '?'}${img.ai_duration_s ? ' · ' + img.ai_duration_s + 's' : ''}`
             : '—';
-          return `<tr>
+          return `<tr class="cursor-pointer hover:bg-primary/10 detail-row" data-img-id="${img.id}">
             <td><img src="/uploads/${img.filename}" class="w-10 h-10 object-cover rounded" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'"/></td>
             <td class="text-sm truncate max-w-[7rem]" title="${img.filename}">${img.filename}</td>
             <td class="text-xs text-base-content/60">${dateStr}</td>
@@ -794,8 +884,16 @@
             <td><button class="btn btn-xs btn-error btn-outline delete-img-btn" data-id="${img.id}">✕</button></td>
           </tr>`;
         }).join('');
+        tbody.querySelectorAll('.detail-row').forEach(row => {
+          row.addEventListener('click', (e) => {
+            if (e.target.closest('.delete-img-btn')) return;
+            const imgData = imageDataMap[row.dataset.imgId];
+            if (imgData) openImageDetail(imgData);
+          });
+        });
         tbody.querySelectorAll('.delete-img-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             fetch(`/api/images/${btn.dataset.id}`, { method: 'DELETE' })
               .then(r => r.json())
               .then(() => loadImages())
@@ -808,6 +906,88 @@
     document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 0) { currentPage--; loadImages(); } });
     document.getElementById('nextPage').addEventListener('click', () => { currentPage++; loadImages(); });
     loadImages();
+
+    // --- Image Detail Overlay ---
+    function formatTimestamp(ts) {
+      if (!ts) return '—';
+      const d = new Date(ts * 1000);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+    }
+
+    function openImageDetail(img) {
+      const modal = document.getElementById('imageDetailModal');
+      document.getElementById('detailImage').src = '/uploads/' + img.filename;
+      document.getElementById('detailImage').alt = img.filename;
+      // Reset enlarge state
+      const imgEl = document.getElementById('detailImage');
+      imgEl.classList.add('max-h-64');
+      imgEl.classList.remove('max-h-[80vh]');
+
+      document.getElementById('detailOriginalFilename').textContent = img.original_filename || img.filename;
+      document.getElementById('detailFilename').textContent = img.filename;
+      document.getElementById('detailDocId').textContent = img.id;
+      document.getElementById('detailUploadDate').textContent = formatTimestamp(img.timestamp);
+
+      const statusBadge = {
+        'uploaded': 'badge-info', 'ai_processing': 'badge-warning', 'ai_done': 'badge-accent',
+        'lucid_sending': 'badge-warning', 'done': 'badge-success', 'error': 'badge-error',
+      }[img.status] || 'badge-ghost';
+      const statusLabel = img.status === 'error'
+        ? `Error (${img.error_source || '?'})`
+        : img.status?.replace(/_/g, ' ') || '—';
+      document.getElementById('detailStatus').innerHTML = `<span class="badge badge-sm ${statusBadge}">${statusLabel}</span>`;
+      document.getElementById('detailOptimize').textContent = img.optimize === false ? 'No' : 'Yes';
+
+      document.getElementById('detailAiProvider').textContent = img.ai_provider || '—';
+      document.getElementById('detailAiModel').textContent = img.ai_model || '—';
+      document.getElementById('detailAiDuration').textContent = img.ai_duration_s ? img.ai_duration_s + 's' : '—';
+      document.getElementById('detailAiShapes').textContent = img.ai_shapes || '—';
+      document.getElementById('detailAiLines').textContent = img.ai_lines || '—';
+
+      // User prompt
+      const promptSection = document.getElementById('detailPromptSection');
+      if (img.user_prompt) {
+        promptSection.classList.remove('hidden');
+        document.getElementById('detailUserPrompt').textContent = img.user_prompt;
+      } else {
+        promptSection.classList.add('hidden');
+      }
+
+      // Lucid
+      const lucidSection = document.getElementById('detailLucidSection');
+      if (img.lucid_sent_at) {
+        lucidSection.classList.remove('hidden');
+        document.getElementById('detailLucidDuration').textContent = img.lucid_duration_s ? img.lucid_duration_s + 's' : '—';
+        let lucidResp = img.lucid_response;
+        if (typeof lucidResp === 'string' && lucidResp) {
+          try { lucidResp = JSON.parse(lucidResp); } catch(e) {}
+        }
+        const editUrl = lucidResp?.editUrl || '';
+        document.getElementById('detailLucidLink').innerHTML = editUrl
+          ? `<a href="${editUrl}" target="_blank" class="link link-primary">Open in Lucidchart →</a>`
+          : '—';
+      } else {
+        lucidSection.classList.add('hidden');
+      }
+
+      // Timing
+      document.getElementById('detailAiSentAt').textContent = formatTimestamp(img.ai_sent_at);
+      document.getElementById('detailAiReceivedAt').textContent = formatTimestamp(img.ai_received_at);
+      document.getElementById('detailLucidSentAt').textContent = formatTimestamp(img.lucid_sent_at);
+      document.getElementById('detailLucidReceivedAt').textContent = formatTimestamp(img.lucid_received_at);
+
+      // Error
+      const errorSection = document.getElementById('detailErrorSection');
+      if (img.status === 'error') {
+        errorSection.classList.remove('hidden');
+        document.getElementById('detailErrorSource').textContent = img.error_source || '—';
+        document.getElementById('detailErrorDetail').textContent = img.error_detail || '—';
+      } else {
+        errorSection.classList.add('hidden');
+      }
+
+      modal.showModal();
+    }
 
     // --- Debug Console (only active with ?debug=true) ---
     const DEBUG_MODE = new URLSearchParams(window.location.search).get('debug') === 'true';
