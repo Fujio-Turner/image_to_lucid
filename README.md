@@ -1,4 +1,4 @@
-# Lucid v1.2.0
+# Lucid v1.2.1
 
 ![Image to Lucidchart - AI-Powered Diagram Conversion](img/hero.png)
 
@@ -28,7 +28,8 @@ An image-to-Lucidchart pipeline built with **Flask**, **Couchbase Lite CE** (C e
 - **Debug console** — activated via `?debug=true`, with real-time log streaming, color-coded stages, and resend buttons
 - **Image record tracking** — full lifecycle with timestamps, AI provider/model, duration, shape/line counts, error tracking
 - **Live status indicators** — three circular buttons showing real-time health of CB Lite, AI API, and Lucid REST API
-- **Image history** — paginated table (limit 10, offset-based) with thumbnails, status badges, and delete buttons
+- **Image detail overlay** — click any row in Recent Images to open a full detail modal with zoomable image preview, uploaded vs saved filename, AI processing stats, user prompt, Lucid import link, timing breakdown, and error details
+- **Image history** — paginated table (limit 10, offset-based) with thumbnails, status badges, delete buttons, and clickable rows with primary-tinted hover
 - **Light / Dark theme toggle** with localStorage persistence
 - **Settings modal** — collapsible sections for all credentials and read-only timeout display
 - **DaisyUI components** — navbar, file-input, steps, modal, toast, card, table, toggle, collapse, badge
@@ -131,7 +132,7 @@ Three circular buttons at the top of the page show live connectivity:
 |---|---|
 | **CB Lite** 🟢/🔴 | Can open the local Couchbase Lite database |
 | **AI API** 🟢/🔴 | Reachability of the selected AI provider |
-| **Lucid** 🟢/🔴 | Lucid REST API at `/documents` with saved API key |
+| **Lucid** 🟢/🔴 | Lucid REST API at `/users` with saved API key (accepts 403 as valid) |
 
 Status is polled every 30 seconds.
 
@@ -153,7 +154,8 @@ Lucid uses **Couchbase Lite Community Edition** (C library with Python CFFI bind
 
 | Field | Description |
 |---|---|
-| `filename` | Original filename |
+| `filename` | Saved filename (sanitized) |
+| `original_filename` | Original uploaded filename (before sanitization) |
 | `timestamp` | Upload epoch timestamp |
 | `status` | `uploaded` → `ai_processing` → `ai_done` → `lucid_sending` → `done` (or `error`) |
 | `ai_provider` | Provider used (gemini, openai, claude, xai) |
@@ -167,6 +169,8 @@ Lucid uses **Couchbase Lite Community Edition** (C library with Python CFFI bind
 | `lucid_received_at` | Epoch time when Lucid response arrived |
 | `lucid_duration_s` | Lucid round-trip time in seconds |
 | `lucid_response` | Lucid API response body |
+| `user_prompt` | Optional user instructions sent to AI |
+| `optimize` | Whether image optimization was applied |
 | `error_source` | `ai` or `lucid` (on error) |
 | `error_detail` | Error message detail |
 
