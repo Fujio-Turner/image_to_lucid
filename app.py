@@ -611,8 +611,11 @@ def _normalize_color(value):
 
 
 def _sanitize_shapes(shapes):
-    """Sanitize color values in shapes so Lucid accepts them."""
+    """Sanitize color values and bounding boxes in shapes so Lucid accepts them."""
     for shape in shapes:
+        bb = shape.get("boundingBox", {})
+        if "rotation" in bb:
+            bb["rotation"] = max(0, min(360, bb["rotation"]))
         style = shape.get("style", {})
         fill = style.get("fill", {})
         if "color" in fill:
