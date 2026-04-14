@@ -1,5 +1,16 @@
 # Release Notes
 
+## v1.2.2 — Improved README & How-It-Works Diagram
+
+### Improvements
+
+- **README rewrite** — Reorganized README into a Problem → Solution → How to Use structure so readers immediately understand what the project does without reading a wall of feature bullets
+- **"How It Works" diagram** — Added `img/how_it_works.png` flowchart showing the Image + Custom Prompt → AI → Lucidchart pipeline at a glance
+- **Feature sections** — Grouped features under "What It Can Do For You" with descriptive subsections (Multi-Provider AI, Full Lucidchart Shape Support, Optimized Pipeline, etc.)
+- **Step-by-step usage guide** — Added numbered walkthrough (Configure → Upload → Review → Prompt → Process → View) under "How to Use the Tool"
+
+---
+
 ## v1.2.1 — Image Detail Overlay, Bug Fixes & Stability
 
 ### New Features

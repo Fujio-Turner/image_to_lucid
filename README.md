@@ -1,8 +1,8 @@
-# Lucid v1.2.1
+# Lucid v1.2.2
 
 ![Image to Lucidchart - AI-Powered Diagram Conversion](img/hero.png)
 
-An image-to-Lucidchart pipeline built with **Flask**, **Couchbase Lite CE** (C edition), and **DaisyUI**. Upload images, AI analyzes them into diagram shapes and lines, then auto-imports into Lucidchart via the Standard Import API — all from a single Docker container.
+**Turn any image into an editable Lucidchart diagram — powered by AI, right from your browser.**
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.1-green)
@@ -12,27 +12,32 @@ An image-to-Lucidchart pipeline built with **Flask**, **Couchbase Lite CE** (C e
 
 ---
 
-## Features
+## The Problem
 
-- **AI Instructions text box** — Optional freeform text input sent alongside the image to AI, enabling users to ask the AI to add, remove, modify, or analyze parts of the diagram (e.g., "Identify bottlenecks" or "Add a pipeline at step X connecting back to Y")
-- **Full Lucid Standard Import support** — AI prompt covers all shape libraries (Standard, Shape, Flowchart, Container, Table), all 22 endpoint styles, groups, layers, swim lanes, tables, and more
-- **Reference integrity validation** — AI is instructed to self-validate all ID references; server-side safety net drops any lines/groups/layers with invalid references before sending to Lucid
-- **Token estimation breakdown** — Metadata preview shows total estimated tokens with breakdown (image tokens + prompt tokens)
-- **Image optimization** — Automatic downscaling (max 1500px) and JPEG re-encoding before sending to AI, with toggleable Optimize Image control and real-time metadata preview (size, dimensions, est. tokens)
-- **User-controlled pipeline** — Upload → review metadata → Process → AI → Lucid, with Cancel and Delete buttons
-- **Multi-provider AI support** — Gemini (`gemini-2.0-flash`), OpenAI (`gpt-4o`), Claude (`claude-sonnet-4-20250514`), xAI/Grok (`grok-4.20-reasoning`)
-- **Lucidchart Standard Import API** integration — creates diagrams automatically from AI analysis
-- **Drag & drop / browse** image upload (PNG, JPEG, JPG)
-- **Couchbase Lite CE** (C SDK + Python CFFI bindings) for local embedded storage — no external database required
-- **Processing pipeline** with visual step tracker: Upload → AI → Lucid → Done
-- **Debug console** — activated via `?debug=true`, with real-time log streaming, color-coded stages, and resend buttons
-- **Image record tracking** — full lifecycle with timestamps, AI provider/model, duration, shape/line counts, error tracking
-- **Live status indicators** — three circular buttons showing real-time health of CB Lite, AI API, and Lucid REST API
-- **Image detail overlay** — click any row in Recent Images to open a full detail modal with zoomable image preview, uploaded vs saved filename, AI processing stats, user prompt, Lucid import link, timing breakdown, and error details
-- **Image history** — paginated table (limit 10, offset-based) with thumbnails, status badges, delete buttons, and clickable rows with primary-tinted hover
-- **Light / Dark theme toggle** with localStorage persistence
-- **Settings modal** — collapsible sections for all credentials and read-only timeout display
-- **DaisyUI components** — navbar, file-input, steps, modal, toast, card, table, toggle, collapse, badge
+Did you:
+- Take a picture of a whiteboard sketch
+- Take a screenshot of an architecture/workflow diagram
+- Snap a photo of a flowchart scribbled on paper
+- Download architecture/workflow diagram image you want to emulate
+
+AND you need it in Lucidchart?
+
+### How You'd Normally Do It
+
+Open Lucidchart, stare at your image, and manually recreate every box, arrow, and label one by one. :-/ 
+- Tedious
+- Error-prone
+- Slow — especially for complex diagrams with dozens of shapes and connections
+
+### How You'd Like to Do It
+
+Import the image and have it **auto-magically** appear as an editable Lucidchart diagram — shapes, lines, containers, and all.
+
+### This Project Does That — and More
+
+![How It Works](img/how_it_works.png)
+
+Lucid takes your image, sends it to AI, and the AI converts it into a fully editable Lucidchart diagram automatically. But it doesn't stop there — you can also type a **custom prompt** to change, update, or enhance the diagram before it's created. Tell the AI things like *"Add a retry path between step 3 and step 1"*, *"Identify bottlenecks"*, or *"Remove the database layer"* and it adjusts the output accordingly.
 
 ---
 
@@ -42,7 +47,9 @@ An image-to-Lucidchart pipeline built with **Flask**, **Couchbase Lite CE** (C e
 
 ---
 
-## Quick Start
+## How to Use the Tool
+
+### Quick Start
 
 ```bash
 docker compose up --build
@@ -51,6 +58,87 @@ docker compose up --build
 Open **http://localhost:8888**
 
 ![Home Page](img/home_page.png)
+
+### Step-by-Step
+
+1. **Configure credentials** — Click the gear icon and enter your API keys for Lucidchart and at least one AI provider (Gemini, OpenAI, Claude, or xAI)
+2. **Upload an image** — Drag and drop (or browse) a PNG or JPEG file
+3. **Review metadata** — Check the image preview, dimensions, and estimated token cost
+4. **Add a custom prompt (optional)** — Type natural-language instructions to guide the AI (e.g., *"Add a load balancer"*, *"Highlight the bottleneck"*)
+5. **Process** — Select your AI provider and click Process. The step tracker shows progress: Upload → AI → Lucid → Done
+6. **View your diagram** — Click the Lucidchart link to open your new editable diagram
+
+---
+
+## What It Can Do For You
+
+### Multi-Provider AI
+Choose from **Gemini**, **OpenAI (GPT-4o)**, **Claude**, or **xAI/Grok** — switch providers anytime from the Settings modal.
+
+### Full Lucidchart Shape Support
+Generates all Standard Import shape libraries (flowchart, containers, tables, swim lanes), 22 endpoint/line styles, groups, and layers — with automatic reference-integrity validation.
+
+### Optimized Pipeline
+Images are auto-downscaled and re-encoded before sending to AI. A step tracker (Upload → AI → Lucid → Done) shows progress, and a token-estimation preview lets you gauge cost before processing.
+
+### Built-in Debug and History
+- Paginated image history with thumbnails, status badges, and detail overlays
+- Debug console (`?debug=true`) with real-time color-coded logs and resend buttons
+- Live health indicators for Couchbase Lite, AI API, and Lucid API
+
+### Single Container, Zero Dependencies
+Runs entirely from one Docker container with an embedded Couchbase Lite CE database — no external database or services required.
+
+### Settings
+
+Click the gear icon in the top-right corner to configure:
+
+- **Lucid REST API** — API key (Bearer token from lucid.app/developer)
+- **Gemini** — API key
+- **OpenAI** — API key
+- **Claude** — API key
+- **xAI (Grok)** — API key
+
+Credentials are stored in the Couchbase Lite embedded database inside the container (persisted via Docker volume).
+
+### Debug Mode
+
+Append `?debug=true` to the URL to enable the debug console.
+
+- **Real-time log panel** with color-coded entries that polls every second
+- **Resend to AI** / **Resend to Lucid** buttons for rapid iteration
+- **Clear** and **auto-scroll** controls
+
+**Stages:**
+
+| Stage | Color | Description |
+|---|---|---|
+| `upload` | Info (blue) | Image upload events |
+| `cbl-save` | Accent | Couchbase Lite save operations |
+| `config` | Muted | Credential/config loading |
+| `ai-request` | Warning (yellow) | Outbound AI API request |
+| `ai-response` | Success (green) | AI response received |
+| `ai-error` | Error (red) | AI processing failure |
+| `lucid-request` | Warning (yellow) | Outbound Lucid API request |
+| `lucid-response` | Success (green) | Lucid document created |
+| `validate` | Info (blue) | Reference integrity checks (dropped invalid lines/groups) |
+| `lucid-error` | Error (red) | Lucid API failure |
+
+### Changing the Port
+
+1. Edit `config.json`:
+   ```json
+   { "server": { "port": 9999 } }
+   ```
+2. Update `docker-compose.yml`:
+   ```yaml
+   ports:
+     - "9999:9999"
+   ```
+3. Rebuild:
+   ```bash
+   docker compose up --build
+   ```
 
 ---
 
@@ -87,18 +175,6 @@ Edit this file and rebuild the container to apply changes.
 | `ai_providers.*.base_url` | varies | Base URL for each AI provider |
 | `ai_providers.*.timeout` | `30` | Per-provider timeout override |
 
-### Runtime credentials (via Settings UI)
-
-Click the ⚙️ gear icon in the top-right corner to configure:
-
-- **Lucid REST API** — API key (Bearer token from lucid.app/developer)
-- **Gemini** — API key
-- **OpenAI** — API key
-- **Claude** — API key
-- **xAI (Grok)** — API key
-
-Credentials are stored in the Couchbase Lite embedded database inside the container (persisted via Docker volume).
-
 ---
 
 ## API Endpoints
@@ -130,9 +206,9 @@ Three circular buttons at the top of the page show live connectivity:
 
 | Indicator | What it checks |
 |---|---|
-| **CB Lite** 🟢/🔴 | Can open the local Couchbase Lite database |
-| **AI API** 🟢/🔴 | Reachability of the selected AI provider |
-| **Lucid** 🟢/🔴 | Lucid REST API at `/users` with saved API key (accepts 403 as valid) |
+| **CB Lite** | Can open the local Couchbase Lite database |
+| **AI API** | Reachability of the selected AI provider |
+| **Lucid** | Lucid REST API at `/users` with saved API key (accepts 403 as valid) |
 
 Status is polled every 30 seconds.
 
@@ -178,54 +254,11 @@ If Couchbase Lite is unavailable (e.g., local development without the C library)
 
 ---
 
-## Debug Mode
-
-Append `?debug=true` to the URL to enable the debug console.
-
-- **Real-time log panel** with color-coded entries that polls every second
-- **Resend to AI** / **Resend to Lucid** buttons for rapid iteration
-- **Clear** and **auto-scroll** controls
-
-**Stages:**
-
-| Stage | Color | Description |
-|---|---|---|
-| `upload` | Info (blue) | Image upload events |
-| `cbl-save` | Accent | Couchbase Lite save operations |
-| `config` | Muted | Credential/config loading |
-| `ai-request` | Warning (yellow) | Outbound AI API request |
-| `ai-response` | Success (green) | AI response received |
-| `ai-error` | Error (red) | AI processing failure |
-| `lucid-request` | Warning (yellow) | Outbound Lucid API request |
-| `lucid-response` | Success (green) | Lucid document created |
-| `validate` | Info (blue) | Reference integrity checks (dropped invalid lines/groups) |
-| `lucid-error` | Error (red) | Lucid API failure |
-
----
-
 ## Testing
 
 ```bash
 python -m unittest test_app -v
 ```
-
----
-
-## Changing the Port
-
-1. Edit `config.json`:
-   ```json
-   { "server": { "port": 9999 } }
-   ```
-2. Update `docker-compose.yml`:
-   ```yaml
-   ports:
-     - "9999:9999"
-   ```
-3. Rebuild:
-   ```bash
-   docker compose up --build
-   ```
 
 ---
 
