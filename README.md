@@ -57,7 +57,7 @@ docker compose up --build
 
 Open **http://localhost:8888**
 
-![Home Page](img/home_page.png)
+![Home Page](img/home_page_v2.png)
 
 ### Step-by-Step
 
